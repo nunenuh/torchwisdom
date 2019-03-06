@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import math
 
-__all__ = ['MobileNetv1','mobilenetv1','MobileNetv2','mobilenetv2']
+__all__ = ['MobileNetV1','mobilenetv1','MobileNetV2','mobilenetv2']
 
 model_urls = {
     'mobilenetv1':'',
