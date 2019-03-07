@@ -65,9 +65,9 @@ class UpConv(nn.Module):
     def __init__(self, in_ch, out_ch, mode='bilinear'):
         super(UpConv, self).__init__()
         if mode=='bilinear':
-            self.up = nn.UpsamplingBilinear2d(scale_factor=2)
+            self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
         elif mode=='nearest':
-            self.up = nn.UpsamplingNearest2d(scale_factor=2)
+            self.up = nn.Upsample(scale_factor=2, mode='nearest', align_corners=True)
         elif mode=='transpose':
             self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, kernel_size=2, stride=2)
 
