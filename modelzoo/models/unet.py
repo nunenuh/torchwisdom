@@ -5,6 +5,11 @@ import torch.nn.functional as F
 
 __all__ = ['UNet']
 
+# this code is inspired from  milesial repository
+# https://github.com/milesial/Pytorch-UNet
+# some of the code is taken from that repo and I make changes
+# for the thing I need to change
+
 
 def conv_bn_relu(in_ch, out_ch, ksize=3, padding=1, stride=1):
     return nn.Sequential(
