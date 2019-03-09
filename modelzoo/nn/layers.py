@@ -27,3 +27,33 @@ class Lambda(nn.Module):
         self.func=func
 
     def forward(self, x): return self.func(x)
+
+
+class Classfiers(nn.Module):
+    def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=[0.5,0.3,0.2]):
+        modules = []
+        if use_batchnorm:
+            modules.append(nn.BatchNorm1d(in_features))
+        if use_dropout:
+            modules.append(nn.Dropout(dprob[0]))
+        modules.append(nn.Linear(in_features, in_features // 2))
+        modules.append(nn.ReLU(inplace=True))
+
+        if use_batchnorm:
+            modules.append(nn.BatchNorm1d(in_features))
+        if use_dropout:
+            modules.append(nn.Dropout(dprob[1]))
+        modules.append(nn.Linear(in_features //2, in_features // 4))
+        modules.append(nn.ReLU(inplace=True))
+
+        if use_batchnorm:
+            modules.append(nn.BatchNorm1d(in_features))
+        if use_dropout:
+            modules.append(nn.Dropout(dprob[2]))
+        modules.append(nn.Linear(in_features //4, n_classes))
+
+        self.classfiers = nn.Sequential(*modules)
+
+        def forward(self, x):
+            x = self.classfiers(x)
+            return x
