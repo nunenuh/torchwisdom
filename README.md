@@ -1,2 +1,2 @@
-# modelzoo.pytorch
-Collection of neural network architecture in pytorch
+# torchwisdom
+Collection of my tools to solve problem in my work
