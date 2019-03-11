@@ -83,8 +83,7 @@ class UpConv(nn.Module):
         diffY = x2.size()[2] - x1.size()[2]
         diffX = x2.size()[3] - x1.size()[3]
 
-        x1 = F.pad(x1, (diffX // 2, diffX - diffX // 2,
-                        diffY // 2, diffY - diffY // 2))
+        x1 = F.pad(x1, (diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2))
         # for padding issues, see
         # https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
         # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
@@ -105,19 +104,16 @@ class OutConv(nn.Module):
     def forward(self, x):
         return self.conv(x)
 
-class UNet(nn.Module):
-    def __init__(self, in_chan, n_classes):
-        super(UNet, self).__init__()
-        self.inconv = InConv(in_chan, 64)
-        self.down1 = DownConv(64, 128)
-        self.down2 = DownConv(128, 256)
-        self.down3 = DownConv(256, 512)
-        self.down4 = DownConv(512, 512)
-        self.up1 = UpConv(1024, 256)
-        self.up2 = UpConv(512, 128)
-        self.up3 = UpConv(256, 64)
-        self.up4 = UpConv(128, 64)
-        self.outconv = OutConv(64, n_classes)
+
+class UNetEncoder(nn.Module):
+    def __init__(self, in_chan, start_feat=64):
+        super(UNetEncoder, self).__init__()
+        self.out_chan = start_feat * 8
+        self.inconv = InConv(in_chan, start_feat)
+        self.down1 = DownConv(start_feat, start_feat*2)
+        self.down2 = DownConv(start_feat*2, start_feat*4)
+        self.down3 = DownConv(start_feat*4, start_feat*8)
+        self.down4 = DownConv(start_feat*8, start_feat*8)
 
     def forward(self, x):
         inc = self.inconv(x)
@@ -125,11 +121,40 @@ class UNet(nn.Module):
         dc2 = self.down2(dc1)
         dc3 = self.down3(dc2)
         dc4 = self.down4(dc3)
+        return dc4, dc3, dc2, dc1, inc
+
+
+class UNetDecoder(nn.Module):
+    def __init__(self, in_chan, n_classes):
+        super(UNetDecoder, self).__init__()
+        self.up1 = UpConv(in_chan, in_chan//4)
+        self.up2 = UpConv(in_chan//2, in_chan//8)
+        self.up3 = UpConv(in_chan//4, in_chan//16)
+        self.up4 = UpConv(in_chan//8, in_chan//16)
+        self.outconv = OutConv(in_chan//16, n_classes)
+
+    def forward(self, dc4, dc3, dc2, dc1, inc):
         up1 = self.up1(dc4, dc3)
         up2 = self.up2(up1, dc2)
         up3 = self.up3(up2, dc1)
         up4 = self.up4(up3, inc)
         out = self.outconv(up4)
+        return out
+
+
+class UNet(nn.Module):
+    def __init__(self, in_chan, n_classes, start_feat=64):
+        super(UNet, self).__init__()
+        self.encoder_in_chan = in_chan
+        self.decoder_in_chan = start_feat * 16
+        self.start_feat = start_feat
+
+        self.encoder = UNetEncoder(in_chan=self.encoder_in_chan, start_feat=start_feat)
+        self.decoder = UNetDecoder(in_chan=self.decoder_in_chan, n_classes=n_classes)
+
+    def forward(self, x):
+        dc4, dc3, dc2, dc1, inc = self.encoder(x)
+        out = self.decoder(dc4, dc3, dc2, dc1, inc)
         return out
 
 
