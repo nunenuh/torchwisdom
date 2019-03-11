@@ -158,10 +158,58 @@ class UNet(nn.Module):
         return out
 
 
+
+class TunnableUNetEncoder(nn.Module):
+    def __init__(self, in_chan, start_feat=64, deep=4):
+        super(TunnableUNetEncoder, self).__init__()
+        self.out_chan = start_feat * 8
+        self.in_chan = in_chan
+        self.start_feat = start_feat
+        self.deep = deep
+        self.chan = self._generate_chan()
+
+        modules = self._make_layer(self.in_chan, self.start_feat, self.chan)
+        self.encoder = nn.Sequential(*modules)
+
+    def _make_layer(self, in_chan, start_feat, chan):
+        modules = []
+        modules.append(InConv(in_chan, start_feat))
+        for d in range(self.deep):
+           (in_chan, out_chan) = self.chan[d]
+           modules.append(DownConv(in_chan, out_chan))
+        return modules
+
+    def _generate_chan(self):
+        chan = []
+        for d in range(self.deep):
+            c1 = 2 ** d
+            c2 = 2 ** (d + 1)
+            if (d + 1) != self.deep:
+                pair = (self.start_feat * c1, self.start_feat * c2)
+            else:
+                pair = (self.start_feat * c1, self.start_feat * c1)
+            chan.append(pair)
+        return chan
+
+    def forward(self, x):
+        output = []
+        for d in range(self.deep):
+            x = self.encoder[d](x)
+            output.append(x)
+        return output
+
+
+class TunnableUNet(nn.Module):
+    def __init__(self, in_chan, n_classes, cfg):
+        super(TunnableUNet, self).__init__()
+        self.cfg = cfg
+
+
 if __name__ == '__main__':
-    model = UNet(in_chan=1, n_classes=1)
+    model = TunnableUNetEncoder(in_chan=1, start_feat=64, deep=5)
     print(model)
 
     input = torch.rand(1,1,224,224)
     output = model(input)
-    print(output)
+    for i in range(len(output)):
+        print(output[i].shape)
