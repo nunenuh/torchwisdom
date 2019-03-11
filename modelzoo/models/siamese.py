@@ -5,6 +5,7 @@ import torchvision
 from torchvision.models.resnet import  BasicBlock, Bottleneck, model_urls, ResNet
 import torch.utils.model_zoo as model_zoo
 
+__all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet18','siamese_resnet34','siamese_resnet50','siamese_resnet101','siamese_resnet152']
 
 class Classfiers(nn.Module):
     def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=[0.5,0.3,0.2]):
@@ -49,6 +50,7 @@ class SiameseTrainer(nn.Module):
         output1 = self.forward_once(x)
         output2 = self.forward_once(y)
         return output1, output2
+
 
 def siamese_resnet18(pretraned_backbone=True, encoder_digit=64, **kwargs):
     backbone = SiameseResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
@@ -103,7 +105,6 @@ def siamese_resnet152(pretraned_backbone=True, encoder_digit=64, **kwargs):
     model_trainer = SiameseTrainer(backbone)
 
     return model_trainer, backbone
-
 
 
 if __name__ == '__main__':
