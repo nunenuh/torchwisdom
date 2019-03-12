@@ -158,9 +158,9 @@ class UNet(nn.Module):
         return out
 
 
-class TunnableUNetEncoder(nn.Module):
+class TuneableUNetEncoder(nn.Module):
     def __init__(self, in_chan, start_feat=64, deep=4):
-        super(TunnableUNetEncoder, self).__init__()
+        super(TuneableUNetEncoder, self).__init__()
         self.out_chan = start_feat * 8
         self.in_chan = in_chan
         self.start_feat = start_feat
@@ -199,9 +199,9 @@ class TunnableUNetEncoder(nn.Module):
         return output
 
 
-class TunnableUNetDecoder(nn.Module):
+class TuneableUNetDecoder(nn.Module):
     def __init__(self, in_chan, n_classes, deep=4):
-        super(TunnableUNetDecoder, self).__init__()
+        super(TuneableUNetDecoder, self).__init__()
         self.in_chan = in_chan
         self.n_classes = n_classes
         self.deep = deep
@@ -247,17 +247,17 @@ class TunnableUNetDecoder(nn.Module):
         return x
 
 
-class TunnableUNet(nn.Module):
+class TuneableUNet(nn.Module):
     def __init__(self, in_chan, n_classes, config):
-        super(TunnableUNet, self).__init__()
+        super(TuneableUNet, self).__init__()
         self.config = config
-        self.encoder = TunnableUNetEncoder(
+        self.encoder = TuneableUNetEncoder(
             in_chan=in_chan,
             start_feat=self.config['start_feat'],
             deep=self.config['deep'],
         )
 
-        self.decoder = TunnableUNetDecoder(
+        self.decoder = TuneableUNetDecoder(
             in_chan=self.encoder.last_chan,
             n_classes=n_classes,
             deep=self.config['deep']
