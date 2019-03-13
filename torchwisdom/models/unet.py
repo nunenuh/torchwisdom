@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
+from torchvision.models import  resnet
 
 
-__all__ = ['UNet']
+__all__ = ['UNet', 'TuneableUNet']
 
 # this code is inspired from  milesial repository
 # https://github.com/milesial/Pytorch-UNet
@@ -97,12 +99,23 @@ class UpConv(nn.Module):
         return x
 
 class OutConv(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, use_upsample=False, mode='bilinear'):
         super(OutConv, self).__init__()
+        self.use_upsample = use_upsample
+        if use_upsample:
+            if mode == 'bilinear':
+                self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=False)
+            elif mode == 'nearest':
+                self.up = nn.Upsample(scale_factor=2, mode='nearest', align_corners=True)
+            elif mode == 'transpose':
+                self.up = nn.ConvTranspose2d(in_ch // 2, in_ch // 2, kernel_size=2, stride=2)
         self.conv = nn.Conv2d(in_ch, out_ch, kernel_size=1)
 
     def forward(self, x):
-        return self.conv(x)
+        if self.use_upsample:
+            x  = self.up(x)
+        x = self.conv(x)
+        return x
 
 
 class UNetEncoder(nn.Module):
@@ -269,11 +282,128 @@ class TuneableUNet(nn.Module):
         return x
 
 
-if __name__ == '__main__':
-    config = {'start_feat': 64, 'deep': 4}
-    model = TunnableUNet(in_chan=1, n_classes=1, cfg=config)
+class ResNetUNetEncoder(resnet.ResNet):
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False):
+        super(ResNetUNetEncoder, self).__init__(block, layers, num_classes, zero_init_residual)
+        self.expansion = block.expansion
+        self.last_chan = block.expansion * 512
 
-    input = torch.rand(1, 1, 224, 224)
-    out = model(input)
-    print(out)
+    def forward(self, x):
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        inc = x
+
+        x = self.maxpool(x)
+        x = self.layer1(x)
+        dc1 = x
+
+        x = self.layer2(x)
+        dc2 = x
+
+        x = self.layer3(x)
+        dc3 = x
+
+        x = self.layer4(x)
+        dc4 =x
+
+        return dc4, dc3, dc2, dc1, inc
+
+class ResNetUNetDecoder(nn.Module):
+    def __init__(self, in_chan, expansion, n_classes):
+        super(ResNetUNetDecoder, self).__init__()
+        self.in_chan = in_chan
+        self.expansion = expansion
+        self.n_classes = n_classes
+        self.chan = self._generate_chan()
+
+        self.up1 = UpConv(self.chan[0]+self.chan[1], 256)
+        self.up2 = UpConv(self.chan[2]+256, 128)
+        self.up3 = UpConv(self.chan[3]+128, 64)
+        self.up4 = UpConv(self.chan[4]+64, 64)
+        self.outconv = OutConv(64, n_classes, use_upsample=True)
+
+    def _generate_chan(self):
+        chan = []
+        tmp_chan = self.in_chan
+        for i in range(5):
+            chan.append(tmp_chan)
+            if expansion == 4:
+                if i + 1 == 4:
+                    tmp_chan = tmp_chan // 4
+                else:
+                    tmp_chan = tmp_chan // 2
+            elif expansion == 1:
+                if i + 1 == 4:
+                    tmp_chan = tmp_chan
+                else:
+                    tmp_chan = tmp_chan // 2
+        return chan
+
+    def forward(self, dc4, dc3, dc2, dc1, inc):
+        up1 = self.up1(dc4, dc3)
+        up2 = self.up2(up1, dc2)
+        up3 = self.up3(up2, dc1)
+        up4 = self.up4(up3, inc)
+        out = self.outconv(up4)
+        return out
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    # config = {'start_feat': 64, 'deep': 4}
+    # model = TuneableUNet(in_chan=1, n_classes=1, cfg=config)
+    #
+    # input = torch.rand(1, 1, 224, 224)
+    # out = model(input)
+    # print(out)
+    expansion = 4
+    input = torch.rand(1, 3, 224, 224)
+    net = resnet.resnet50()
+    x = net.conv1(input)
+    x = net.bn1(x)
+    x = net.relu(x)
+    print('inconv',x.shape)
+    inconv = x
+
+    x = net.maxpool(x)
+    x = net.layer1(x)
+    print('layer1',x.shape)
+    dc1 = x
+
+    x  = net.layer2(x)
+    print('layer2',x.shape)
+    dc2 = x
+
+    x = net.layer3(x)
+    print('layer3',x.shape)
+    dc3=x
+
+    x = net.layer4(x)
+    print('layer4',x.shape)
+    dc4=x
+
+    up1 = UpConv(dc4.size(1)+dc3.size(1), 512)(dc4, dc3)
+    print(up1.shape)
+
+    up2 = UpConv(up1.size(1)+dc2.size(1), 256)(up1, dc2)
+    print(up2.shape)
+
+    up3 = UpConv(up2.size(1)+dc1.size(1), 128)(up2, dc1)
+    print(up3.shape)
+
+    up4 = UpConv(up3.size(1) + inconv.size(1), 64)(up3, inconv)
+    print(up4.shape)
+
+    outconv = OutConv(64, 1, use_upsample=True)(up4)
+    print(outconv.shape)
+
+
+
+
 
