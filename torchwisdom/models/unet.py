@@ -3,9 +3,18 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
 from torchvision.models import  resnet
+import torch.utils.model_zoo as model_zoo
 
 
 __all__ = ['UNet', 'TuneableUNet']
+
+model_urls = {
+    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
+    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
+    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
+    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+}
 
 # this code is inspired from  milesial repository
 # https://github.com/milesial/Pytorch-UNet
@@ -283,10 +292,11 @@ class TuneableUNet(nn.Module):
 
 
 class ResNetUNetEncoder(resnet.ResNet):
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False):
+    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, in_chan=3):
         super(ResNetUNetEncoder, self).__init__(block, layers, num_classes, zero_init_residual)
         self.expansion = block.expansion
         self.last_chan = block.expansion * 512
+        self.conv1 = nn.Conv2d(in_chan, 64, kernel_size=7, stride=2, padding=3, bias=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -348,12 +358,38 @@ class ResNetUNetDecoder(nn.Module):
         out = self.outconv(up4)
         return out
 
+class ResNetUNet(nn.Module):
+    def __init__(self, in_chan, n_classes, pretrained=True, version=18):
+        super(UNet, self).__init__()
+        self.pretrained = pretrained
+        self.version = version
+        self.in_chan = in_chan
+
+        if in_chan!=3 and pretrained==True:
+            raise ValueError("in_chan has to be 3 when you set pretrained=True")
+
+        self.encoder = self._build_resnet()
+        self.decoder = ResNetUNetDecoder(in_chan=self.decoder_in_chan, expansion=self.encoder.expansion, n_classes=n_classes)
+
+    def _build_resnet(self):
+        block = self._get_block()
+        ver = self.version
+        name_ver = 'resnet'+str(ver)
+        model = ResNetUNetEncoder(resnet.BasicBlock, block[str(ver)], in_chan=self.in_chan)
+        if self.pretrained:
+            model.load_state_dict(model_zoo.load_url(model_urls[name_ver]))
+        return model
+
+    def _get_block(self):
+        return {'18':[2, 2, 2, 2], '34':[3, 4, 23, 3],
+                '50':[3, 4, 6, 3], '101':[3, 4, 23, 3],
+                '152':[3, 8, 36, 3]}
 
 
-
-
-
-
+    def forward(self, x):
+        dc4, dc3, dc2, dc1, inc = self.encoder(x)
+        out = self.decoder(dc4, dc3, dc2, dc1, inc)
+        return out
 
 if __name__ == '__main__':
     # config = {'start_feat': 64, 'deep': 4}
@@ -362,48 +398,48 @@ if __name__ == '__main__':
     # input = torch.rand(1, 1, 224, 224)
     # out = model(input)
     # print(out)
-    expansion = 4
-    input = torch.rand(1, 3, 224, 224)
-    net = resnet.resnet50()
-    x = net.conv1(input)
-    x = net.bn1(x)
-    x = net.relu(x)
-    print('inconv',x.shape)
-    inconv = x
-
-    x = net.maxpool(x)
-    x = net.layer1(x)
-    print('layer1',x.shape)
-    dc1 = x
-
-    x  = net.layer2(x)
-    print('layer2',x.shape)
-    dc2 = x
-
-    x = net.layer3(x)
-    print('layer3',x.shape)
-    dc3=x
-
-    x = net.layer4(x)
-    print('layer4',x.shape)
-    dc4=x
-
-    up1 = UpConv(dc4.size(1)+dc3.size(1), 512)(dc4, dc3)
-    print(up1.shape)
-
-    up2 = UpConv(up1.size(1)+dc2.size(1), 256)(up1, dc2)
-    print(up2.shape)
-
-    up3 = UpConv(up2.size(1)+dc1.size(1), 128)(up2, dc1)
-    print(up3.shape)
-
-    up4 = UpConv(up3.size(1) + inconv.size(1), 64)(up3, inconv)
-    print(up4.shape)
-
-    outconv = OutConv(64, 1, use_upsample=True)(up4)
-    print(outconv.shape)
-
-
-
-
-
+    # expansion = 4
+    # input = torch.rand(1, 3, 224, 224)
+    # net = resnet.resnet50()
+    # x = net.conv1(input)
+    # x = net.bn1(x)
+    # x = net.relu(x)
+    # print('inconv',x.shape)
+    # inconv = x
+    #
+    # x = net.maxpool(x)
+    # x = net.layer1(x)
+    # print('layer1',x.shape)
+    # dc1 = x
+    #
+    # x  = net.layer2(x)
+    # print('layer2',x.shape)
+    # dc2 = x
+    #
+    # x = net.layer3(x)
+    # print('layer3',x.shape)
+    # dc3=x
+    #
+    # x = net.layer4(x)
+    # print('layer4',x.shape)
+    # dc4=x
+    #
+    # up1 = UpConv(dc4.size(1)+dc3.size(1), 512)(dc4, dc3)
+    # print(up1.shape)
+    #
+    # up2 = UpConv(up1.size(1)+dc2.size(1), 256)(up1, dc2)
+    # print(up2.shape)
+    #
+    # up3 = UpConv(up2.size(1)+dc1.size(1), 128)(up2, dc1)
+    # print(up3.shape)
+    #
+    # up4 = UpConv(up3.size(1) + inconv.size(1), 64)(up3, inconv)
+    # print(up4.shape)
+    #
+    # outconv = OutConv(64, 1, use_upsample=True)(up4)
+    # print(outconv.shape)
+    #
+    #
+    #
+    #
+    #
