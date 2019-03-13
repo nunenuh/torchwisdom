@@ -292,8 +292,8 @@ class TuneableUNet(nn.Module):
 
 
 class ResNetUNetEncoder(resnet.ResNet):
-    def __init__(self, block, layers, num_classes=1000, zero_init_residual=False, in_chan=3):
-        super(ResNetUNetEncoder, self).__init__(block, layers, num_classes, zero_init_residual)
+    def __init__(self, block, layers, num_classes=1000, in_chan=3):
+        super(ResNetUNetEncoder, self).__init__(block, layers, num_classes)
         self.expansion = block.expansion
         self.last_chan = block.expansion * 512
         self.conv1 = nn.Conv2d(in_chan, 64, kernel_size=7, stride=2, padding=3, bias=False)
@@ -338,12 +338,12 @@ class ResNetUNetDecoder(nn.Module):
         tmp_chan = self.in_chan
         for i in range(5):
             chan.append(tmp_chan)
-            if expansion == 4:
+            if self.expansion == 4:
                 if i + 1 == 4:
                     tmp_chan = tmp_chan // 4
                 else:
                     tmp_chan = tmp_chan // 2
-            elif expansion == 1:
+            elif self.expansion == 1:
                 if i + 1 == 4:
                     tmp_chan = tmp_chan
                 else:
@@ -360,7 +360,7 @@ class ResNetUNetDecoder(nn.Module):
 
 class ResNetUNet(nn.Module):
     def __init__(self, in_chan, n_classes, pretrained=True, version=18):
-        super(UNet, self).__init__()
+        super(ResNetUNet, self).__init__()
         self.pretrained = pretrained
         self.version = version
         self.in_chan = in_chan
@@ -369,19 +369,22 @@ class ResNetUNet(nn.Module):
             raise ValueError("in_chan has to be 3 when you set pretrained=True")
 
         self.encoder = self._build_resnet()
-        self.decoder = ResNetUNetDecoder(in_chan=self.decoder_in_chan, expansion=self.encoder.expansion, n_classes=n_classes)
+        self.decoder = ResNetUNetDecoder(in_chan=self.encoder.last_chan, expansion=self.encoder.expansion, n_classes=n_classes)
 
     def _build_resnet(self):
         block = self._get_block()
         ver = self.version
         name_ver = 'resnet'+str(ver)
-        model = ResNetUNetEncoder(resnet.BasicBlock, block[str(ver)], in_chan=self.in_chan)
+        if ver>=50:
+            model = ResNetUNetEncoder(resnet.Bottleneck, block[str(ver)], in_chan=self.in_chan)
+        else:
+            model = ResNetUNetEncoder(resnet.BasicBlock, block[str(ver)], in_chan=self.in_chan)
         if self.pretrained:
             model.load_state_dict(model_zoo.load_url(model_urls[name_ver]))
         return model
 
     def _get_block(self):
-        return {'18':[2, 2, 2, 2], '34':[3, 4, 23, 3],
+        return {'18':[2, 2, 2, 2], '34':[3, 4, 6, 3],
                 '50':[3, 4, 6, 3], '101':[3, 4, 23, 3],
                 '152':[3, 8, 36, 3]}
 
@@ -392,12 +395,11 @@ class ResNetUNet(nn.Module):
         return out
 
 if __name__ == '__main__':
-    # config = {'start_feat': 64, 'deep': 4}
-    # model = TuneableUNet(in_chan=1, n_classes=1, cfg=config)
-    #
-    # input = torch.rand(1, 1, 224, 224)
-    # out = model(input)
-    # print(out)
+    model = ResNetUNet(in_chan=3, n_classes=1, pretrained=True, version=18)
+    input = torch.rand(1, 3, 224, 224)
+    out = model(input)
+    print(out)
+
     # expansion = 4
     # input = torch.rand(1, 3, 224, 224)
     # net = resnet.resnet50()
