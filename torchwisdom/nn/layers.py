@@ -57,11 +57,11 @@ class Classfiers(nn.Module):
 
 
 class SimpleClassifiers(nn.Module):
-    def __init__(self, in_feature, n_classes, use_batchnorm=True, use_dropout=True, dprob=0.3):
+    def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=0.3):
         super(SimpleClassifiers, self).__init__()
-        if use_batchnorm : self.bn = nn.BatchNorm1d(in_feature)
+        if use_batchnorm : self.bn = nn.BatchNorm1d(in_features)
         if use_dropout: self.dropout = nn.Dropout(p=dprob)
-        self.fc = nn.Linear(in_feature, n_classes)
+        self.fc = nn.Linear(in_features, n_classes)
 
         self.use_batchnorm = use_batchnorm
         self.use_dropout = use_dropout
