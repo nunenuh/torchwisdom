@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['Flatten','AdaptiveConcatPool2d','Classfiers']
+__all__ = ['Flatten','AdaptiveConcatPool2d','Classfiers', 'SimpleClassifiers']
 
 class Flatten(nn.Module):
     def __init__(self):
@@ -70,4 +70,20 @@ class SimpleClassifiers(nn.Module):
         if self.use_batchnorm: x = self.bn(x)
         if self.use_dropout: x = self.dropout(x)
         x = self.fc(x)
+        return x
+
+class SqueezeNetCustomClassifers(nn.Module):
+    def __init__(self, num_classes=1000):
+        super(SqueezeNetCustomClassifers, self).__init__()
+        self.num_classes = num_classes
+        final_conv = nn.Conv2d(512, self.num_classes, kernel_size=1)
+        self.classifiers = nn.Sequential(
+            nn.Dropout(p=0.5),
+            final_conv,
+            nn.ReLU(inplace=True),
+            nn.AvgPool2d(13, stride=1),
+        )
+
+    def forward(self, x):
+        x = self.classifiers(x)
         return x
