@@ -2,19 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from torchvision.models import  resnet
+from torchvision.models import resnet
+from torchvision.models.resnet import model_urls
 import torch.utils.model_zoo as model_zoo
 
 
 __all__ = ['UNet', 'TuneableUNet']
 
-model_urls = {
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
-    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
-    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
-    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
-}
 
 # this code is inspired from  milesial repository
 # https://github.com/milesial/Pytorch-UNet
@@ -384,10 +378,9 @@ class ResNetUNet(nn.Module):
         return model
 
     def _get_block(self):
-        return {'18':[2, 2, 2, 2], '34':[3, 4, 6, 3],
-                '50':[3, 4, 6, 3], '101':[3, 4, 23, 3],
-                '152':[3, 8, 36, 3]}
-
+        return {'18': [2, 2, 2, 2], '34': [3, 4, 6, 3],
+                '50': [3, 4, 6, 3], '101': [3, 4, 23, 3],
+                '152': [3, 8, 36, 3]}
 
     def forward(self, x):
         dc4, dc3, dc2, dc1, inc = self.encoder(x)
@@ -398,7 +391,7 @@ if __name__ == '__main__':
     model = ResNetUNet(in_chan=3, n_classes=1, pretrained=True, version=18)
     input = torch.rand(1, 3, 224, 224)
     out = model(input)
-    print(out)
+    print(out.shape)
 
     # expansion = 4
     # input = torch.rand(1, 3, 224, 224)
@@ -440,8 +433,3 @@ if __name__ == '__main__':
     #
     # outconv = OutConv(64, 1, use_upsample=True)(up4)
     # print(outconv.shape)
-    #
-    #
-    #
-    #
-    #
