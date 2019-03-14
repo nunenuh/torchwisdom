@@ -4,38 +4,20 @@ import torch.nn.functional as F
 import torchvision
 from torchvision.models.resnet import  BasicBlock, Bottleneck, model_urls, ResNet
 import torch.utils.model_zoo as model_zoo
+from torchwisdom.models import mobilenet
+import torchwisdom.nn.layers as layers
 
-__all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet18','siamese_resnet34','siamese_resnet50','siamese_resnet101','siamese_resnet152']
-
-class Classfiers(nn.Module):
-    def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=[0.5,0.3,0.2]):
-        super(Classfiers, self).__init__()
-        modules = []
-        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features))
-        if use_dropout: modules.append(nn.Dropout(dprob[0]))
-        modules.append(nn.Linear(in_features, in_features // 2))
-        modules.append(nn.ReLU(inplace=True))
-
-        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features//2))
-        if use_dropout: modules.append(nn.Dropout(dprob[1]))
-        modules.append(nn.Linear(in_features //2, in_features // 4))
-        modules.append(nn.ReLU(inplace=True))
-
-        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features//4))
-        if use_dropout: modules.append(nn.Dropout(dprob[2]))
-        modules.append(nn.Linear(in_features //4, n_classes))
-
-        self.classfiers = nn.Sequential(*modules)
-
-    def forward(self, x):
-        x = self.classfiers(x)
-        return x
+__all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet']
 
 
 class SiameseResNet(torchvision.models.ResNet):
     def __init__(self, block, layers, num_classes=1000):
         super(SiameseResNet, self).__init__(block, layers, num_classes)
         self.block_expansion = block.expansion
+
+class SiameseMobileNetV2(mobilenet.MobileNetV2):
+    def __init__(self, in_chan=3, num_classes=1000, input_size=224):
+        super(SiameseMobileNetV2, self).__init__(in_chan, num_classes, input_size)
 
 
 class SiameseTrainer(nn.Module):
@@ -52,65 +34,55 @@ class SiameseTrainer(nn.Module):
         return output1, output2
 
 
-def siamese_resnet18(pretraned_backbone=True, encoder_digit=64, **kwargs):
-    backbone = SiameseResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
-    if pretraned_backbone:
-        backbone.load_state_dict(model_zoo.load_url(model_urls['resnet18']))
+def siamese_resnet(pretrained_backbone=True, encoder_digit=64, version=18, in_chan=3, **kwargs):
+    if in_chan != 3 and pretrained_backbone:
+        raise ValueError("in_chan has to be 3 when you set pretrained=True")
+
+    block = {'18': [2, 2, 2, 2], '34': [3, 4, 6, 3], '50': [3, 4, 6, 3],
+             '101': [3, 4, 23, 3], '152': [3, 8, 36, 3]}
+    name_ver = 'resnet'+str(version)
+
+    backbone = SiameseResNet(BasicBlock, block[str(version)], **kwargs)
+    if pretrained_backbone:
+        backbone.load_state_dict(model_zoo.load_url(model_urls[name_ver]))
     expansion = 512 * backbone.block_expansion
-    backbone.fc = Classfiers(in_features=expansion, n_classes=encoder_digit)
+    backbone.fc = layers.Classfiers(in_features=expansion, n_classes=encoder_digit)
     model_trainer = SiameseTrainer(backbone)
 
     return model_trainer, backbone
 
 
-def siamese_resnet34(pretraned_backbone=True, encoder_digit=64, **kwargs):
-    backbone = SiameseResNet(BasicBlock, [3, 4, 6, 3], **kwargs)
-    if pretraned_backbone:
-        backbone.load_state_dict(model_zoo.load_url(model_urls['resnet34']))
-    expansion = 512 * backbone.block_expansion
-    backbone.fc = Classfiers(in_features=expansion, n_classes=encoder_digit)
+def siamese_mobilenet(pretrained_backbone=True, encoder_digit=64, version=2, in_chan=3, input_size=224, **kwargs):
+    if in_chan != 3 and input_size!=224 and pretrained_backbone:
+        raise ValueError("in_chan has to be 3 and input_size has to be 224 when you set pretrained=True")
+
+    backbone = SiameseMobileNetV2(in_chan=in_chan, input_size=input_size)
+    if pretrained_backbone:
+        mobilenetv2_url = 'https://raw.githubusercontent.com/d-li14/mobilenetv2.pytorch/master/pretrained/mobilenetv2-0c6065bc.pth'
+        backbone.load_state_dict(model_zoo.load_url(mobilenetv2_url))
+    backbone.classifier= layers.SimpleClassifiers(in_features=backbone.output_channel, n_classes=encoder_digit)
     model_trainer = SiameseTrainer(backbone)
 
     return model_trainer, backbone
 
 
-def siamese_resnet50(pretraned_backbone=True, encoder_digit=64, **kwargs):
-    backbone = SiameseResNet(Bottleneck, [3, 4, 6, 3], **kwargs)
-    if pretraned_backbone:
-        backbone.load_state_dict(model_zoo.load_url(model_urls['resnet50']))
-    expansion = 512 * backbone.block_expansion
-    backbone.fc = Classfiers(in_features=expansion, n_classes=encoder_digit)
-    model_trainer = SiameseTrainer(backbone)
 
-    return model_trainer, backbone
-
-
-def siamese_resnet101(pretraned_backbone=True, encoder_digit=64, **kwargs):
-    backbone = SiameseResNet(Bottleneck, [3, 4, 23, 3], **kwargs)
-    if pretraned_backbone:
-        backbone.load_state_dict(model_zoo.load_url(model_urls['resnet101']))
-    expansion = 512 * backbone.block_expansion
-    backbone.fc = Classfiers(in_features=expansion, n_classes=encoder_digit)
-    model_trainer = SiameseTrainer(backbone)
-
-    return model_trainer, backbone
-
-
-def siamese_resnet152(pretraned_backbone=True, encoder_digit=64, **kwargs):
-    backbone = SiameseResNet(Bottleneck, [3, 8, 36, 3], **kwargs)
-    if pretraned_backbone:
-        backbone.load_state_dict(model_zoo.load_url(model_urls['resnet152']))
-    expansion = 512 * backbone.block_expansion
-    backbone.fc = Classfiers(in_features=expansion, n_classes=encoder_digit)
-    model_trainer = SiameseTrainer(backbone)
-
-    return model_trainer, backbone
 
 
 if __name__ == '__main__':
     # resnet = torchvision.models.resnet18()
-    trainer, backbone = siamese_resnet18()
-    print(backbone)
-    x = torch.randn(2,3,224,224)
-    print(backbone(x).shape)
+    trainer, backbone = siamese_mobilenet(pretrained_backbone=True)
+    backbone.eval()
+    # print(backbone)
+    x = torch.randn(1,3,224,224)
+    pic1  = backbone(x)
+
+    y = torch.randn(1, 3, 224, 224)
+    pic2 = backbone(y)
+
+    euc = F.pairwise_distance(pic1, pic2)
+    print(euc)
+
+
+
 
