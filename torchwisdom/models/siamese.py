@@ -2,15 +2,17 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision
-from torchvision.models.resnet import  BasicBlock, Bottleneck, model_urls, ResNet
+from torchvision.models import resnet
+from torchvision.models import squeezenet
 import torch.utils.model_zoo as model_zoo
 from torchwisdom.models import mobilenet
 import torchwisdom.nn.layers as layers
 
-__all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet']
+
+__all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet', 'siamese_mobilenet']
 
 
-class SiameseResNet(torchvision.models.ResNet):
+class SiameseResNet(resnet.ResNet):
     def __init__(self, block, layers, num_classes=1000):
         super(SiameseResNet, self).__init__(block, layers, num_classes)
         self.block_expansion = block.expansion
@@ -18,6 +20,16 @@ class SiameseResNet(torchvision.models.ResNet):
 class SiameseMobileNetV2(mobilenet.MobileNetV2):
     def __init__(self, in_chan=3, num_classes=1000, input_size=224):
         super(SiameseMobileNetV2, self).__init__(in_chan, num_classes, input_size)
+
+class SiameseSqueezeNet(squeezenet.SqueezeNet):
+    def __init__(self, in_chan=3, version=1, num_classes=1000):
+        super(SiameseSqueezeNet, self).__init__(version=version, num_classes=num_classes)
+        self.num_classes = num_classes
+        if version == 1.0:
+            self.features[0] = nn.Conv2d(in_chan, 96, kernel_size=7, stride=2)
+        else:
+            self.features[0] = nn.Conv2d(in_chan, 64, kernel_size=3, stride=2)
+
 
 
 class SiameseTrainer(nn.Module):
@@ -42,9 +54,9 @@ def siamese_resnet(pretrained_backbone=True, encoder_digit=64, version=18, in_ch
              '101': [3, 4, 23, 3], '152': [3, 8, 36, 3]}
     name_ver = 'resnet'+str(version)
 
-    backbone = SiameseResNet(BasicBlock, block[str(version)], **kwargs)
+    backbone = SiameseResNet(resnet.BasicBlock, block[str(version)], **kwargs)
     if pretrained_backbone:
-        backbone.load_state_dict(model_zoo.load_url(model_urls[name_ver]))
+        backbone.load_state_dict(model_zoo.load_url(resnet.model_urls[name_ver]))
     expansion = 512 * backbone.block_expansion
     backbone.fc = layers.Classfiers(in_features=expansion, n_classes=encoder_digit)
     model_trainer = SiameseTrainer(backbone)
@@ -66,12 +78,25 @@ def siamese_mobilenet(pretrained_backbone=True, encoder_digit=64, version=2, in_
     return model_trainer, backbone
 
 
+def siamese_squeezenet(pretrained_backbone=True, encoder_digit=64, version=1.1, in_chan=3, **kwargs):
+    if in_chan != 3 and pretrained_backbone:
+        raise ValueError("in_chan has to be 3 when you set pretrained=True")
+
+    name_ver = "squeezenet" + "_".join(str(version).split('.'))
+    backbone = SiameseSqueezeNet(in_chan=in_chan, version=version, **kwargs)
+    if pretrained_backbone:
+        backbone.load_state_dict(model_zoo.load_url(squeezenet.model_urls[name_ver]))
+    backbone.num_classes = encoder_digit
+    backbone.classifier = layers.SqueezeNetCustomClassifers(num_classes=encoder_digit)
+    model_trainer = SiameseTrainer(backbone)
+    return model_trainer, backbone
+
 
 
 
 if __name__ == '__main__':
     # resnet = torchvision.models.resnet18()
-    trainer, backbone = siamese_mobilenet(pretrained_backbone=True)
+    trainer, backbone = siamese_squeezenet(pretrained_backbone=True, encoder_digit=32, version=1.0)
     backbone.eval()
     # print(backbone)
     x = torch.randn(1,3,224,224)
