@@ -1,10 +1,7 @@
-import torch
 import random
-from PIL import Image
 import PIL
-import collections
+from PIL import Image
 import torchvision.transforms.functional as F
-import torchvision
 from torchvision import transforms
 
 __all__ = ['PairCompose', 'PairResize', 'PairCenterCrop', 'PairColorJitter', 'PairPad',
@@ -30,9 +27,18 @@ class PairCompose(transforms.Compose):
         return img1, img2
 
 
+class PairToTensor(transforms.ToTensor):
+    def __init__(self):
+        super(PairToTensor, self).__init__()
+
+    def __call__(self, img1, img2):
+        img1 = F.to_tensor(img1)
+        img2 = F.to_tensor(img2)
+        return img1, img2
+
 class PairResize(transforms.Resize):
     def __init__(self, size, interpolation=Image.BILINEAR):
-       super(PairResize, self).__init__(size, interpolation)
+       super(PairResize, self).__init__(size=size, interpolation=interpolation)
 
     def __call__(self, img1, img2):
         img1 = F.resize(img1, self.size, self.interpolation)
@@ -116,7 +122,7 @@ class PairRandomHorizontalFlip(transforms.RandomHorizontalFlip):
 
 class PairRandomVerticalFlip(transforms.RandomVerticalFlip):
     def __init__(self, p=0.5):
-        super(PairRandomHorizontalFlip, self).__init__(p)
+        super(PairRandomVerticalFlip, self).__init__(p)
 
     def __call__(self, img1, img2):
         if random.random() < self.p:
@@ -140,7 +146,7 @@ class PairRandomResizedCrop(transforms.RandomResizedCrop):
 
 class PairRandomRotation(transforms.RandomRotation):
     def __init__(self, degrees, resample=False, expand=False, center=None):
-        super(PairRandomRotation, self).__init__(degrees,resample,expand,center)
+        super(PairRandomRotation, self).__init__(degrees, resample, expand, center)
 
     def __call__(self, img1, img2):
         angle = self.get_params(self.degrees)
