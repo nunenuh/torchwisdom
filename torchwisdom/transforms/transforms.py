@@ -7,7 +7,9 @@ import torchvision.transforms.functional as F
 import torchvision
 from torchvision import transforms
 
-__all__ = ['PairCompose','PairResize']
+__all__ = ['PairCompose', 'PairResize', 'PairCenterCrop', 'PairColorJitter', 'PairPad',
+           'PairRandomAffine', 'PairRandomApply', 'PairRandomCrop', 'PairRandomHorizontalFlip',
+           'PairRandomResizedCrop', 'PairRandomRotation', 'PairRandomVerticalFlip','PairGrayscale']
 
 _pil_interpolation_to_str = {
     Image.NEAREST: 'PIL.Image.NEAREST',
@@ -171,5 +173,11 @@ class PairColorJitter(transforms.ColorJitter):
         return transform(img1), transform(img2)
 
 
+class PairGrayscale(transforms.Grayscale):
+    def __init__(self, num_output_channels=1):
+        super(PairGrayscale, self).__init__(num_output_channels)
 
-
+    def __call__(self, img1, img2):
+        img1 = F.to_grayscale(img1, num_output_channels=self.num_output_channels)
+        img2 = F.to_grayscale(img2, num_output_channels=self.num_output_channels)
+        return img1, img2
