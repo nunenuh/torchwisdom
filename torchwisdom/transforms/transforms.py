@@ -102,3 +102,38 @@ class PairRandomCrop(transforms.RandomCrop):
         return F.crop(img, i, j, h, w)
 
 
+class PairRandomHorizontalFlip(transforms.RandomHorizontalFlip):
+    def __init__(self, p=0.5):
+        super(PairRandomHorizontalFlip, self).__init__(p)
+
+    def __call__(self, img1, img2):
+        if random.random() < self.p:
+            img1 = F.hflip(img1)
+            img2 = F.hflip(img2)
+        return img1, img2
+
+class PairRandomVerticalFlip(transforms.RandomVerticalFlip):
+    def __init__(self, p=0.5):
+        super(PairRandomHorizontalFlip, self).__init__(p)
+
+    def __call__(self, img1, img2):
+        if random.random() < self.p:
+            img1 = F.vflip(img1)
+            img2 = F.vflip(img2)
+        return img1, img2
+
+
+class PairRandomResizedCrop(transforms.RandomResizedCrop):
+    def __init__(self, size, scale=(0.08, 1.0), ratio=(3. / 4., 4. / 3.), interpolation=Image.BILINEAR):
+        super(PairRandomResizedCrop, self).__init__(size, scale, ratio, interpolation)
+
+    def __call__(self, img1, img2):
+        i1, j1, h1, w1 = self.get_params(img1, self.scale, self.ratio)
+        img1 = F.resized_crop(img1, i1, j1, h1, w1, self.size, self.interpolation)
+
+        i2, j2, h2, w2 = self.get_params(img2, self.scale, self.ratio)
+        img2 = F.resized_crop(img2, i2, j2, h2, w2, self.size, self.interpolation)
+
+        return img1, img2
+
+
