@@ -136,4 +136,40 @@ class PairRandomResizedCrop(transforms.RandomResizedCrop):
 
         return img1, img2
 
+class PairRandomRotation(transforms.RandomRotation):
+    def __init__(self, degrees, resample=False, expand=False, center=None):
+        super(PairRandomRotation, self).__init__(degrees,resample,expand,center)
+
+    def __call__(self, img1, img2):
+        angle = self.get_params(self.degrees)
+        img1 = F.rotate(img1, angle, self.resample, self.expand, self.center)
+        img2 = F.rotate(img2, angle, self.resample, self.expand, self.center)
+
+        return img1, img2
+
+class PairRandomAffine(transforms.RandomAffine):
+    def __init__(self, degrees, translate=None, scale=None, shear=None, resample=False, fillcolor=0):
+        super(PairRandomAffine, self).__init__(degrees,translate,scale,shear,resample,fillcolor)
+
+    def __call__(self, img1, img2):
+        ret1 = self.get_params(self.degrees, self.translate, self.scale, self.shear, img1.size)
+        img1 = F.affine(img1, *ret1, resample=self.resample, fillcolor=self.fillcolor)
+
+        ret2 = self.get_params(self.degrees, self.translate, self.scale, self.shear, img2.size)
+        img2 = F.affine(img2, *ret2, resample=self.resample, fillcolor=self.fillcolor)
+
+        return img1, img2
+
+
+class PairColorJitter(transforms.ColorJitter):
+    def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
+        super(PairColorJitter, self).__init__(brightness,contrast,saturation,hue)
+
+    def __call__(self, img1, img2):
+        transform = self.get_params(self.brightness, self.contrast,
+                                    self.saturation, self.hue)
+        return transform(img1), transform(img2)
+
+
+
 
