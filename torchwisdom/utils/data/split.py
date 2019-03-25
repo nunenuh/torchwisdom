@@ -9,7 +9,7 @@ class TrainValidSplit(object):
         self.src_path = pathlib.Path(src_path)
         self.src_files = sorted(list(self.src_path.glob("*/*.*")))
         self.src_files_map = self._files_map()
-        self.train_files_map, self.valid_files_map = self._split_map()
+
 
     def _files_map(self) -> object:
         files_map = {}
@@ -51,6 +51,7 @@ class TrainValidSplit(object):
         return tfiles, vfiles
 
     def execute(self, dst_path:str, mode:str='cp'):
+        self.train_files_map, self.valid_files_map = self._split_map()
         if dst_path:
             self.dst_path = pathlib.Path(dst_path)
             self.dst_path.mkdir(parents=True, exist_ok=True)
@@ -90,11 +91,3 @@ class TrainValidSplit(object):
                     raise ValueError('mode only accept value "cp" or "mv"')
 
 
-
-
-
-if __name__ == '__main__':
-    src = '/data/att_faces'
-    dst = '/data/att_faces_new'
-    rs = TrainValidSplit(src_path=src, val_size=0.3)
-    rs.execute(dst, mode='cp')
