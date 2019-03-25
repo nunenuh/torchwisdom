@@ -5,6 +5,7 @@ import pathlib
 import torch
 import torch.utils.data as data
 import torchvision
+from torchvision import transforms
 import numpy as np
 import pandas as pd
 import PIL
@@ -37,23 +38,20 @@ class SiamesePairDataset(data.Dataset):
             im2 = self.transform(im2)
 
         if self.pair_transform:
-            im1, im2 = self.transform_pair(im1, im2)
+            im1, im2 = self.pair_transform(im1, im2)
 
         if self.target_transform:
             sim = self.target_transform(sim)
         return im1, im2, sim
 
     def _files_mapping(self):
-        dirname = []
-        filename = []
         dct = {}
         for f in self.files:
             spl = str(f).split('/')
             dirname = spl[-2]
             filename = spl[-1]
-
             if dirname not in dct.keys():
-                dct.update({dirname: []})
+                dct.update({dirname: [filename]})
             else:
                 dct[dirname].append(filename)
                 dct[dirname] = sorted(dct[dirname])
@@ -153,3 +151,14 @@ class SiamesePairDataset(data.Dataset):
 
         return files_list
 
+
+
+if __name__ == '__main__':
+    tmft = transforms.Compose([
+        transforms.RandomRotation(10),
+        transforms.ToTensor(),
+    ])
+    root = '/data/att_faces'
+    sd = SiamesePairDataset(root, ext="pgm", transform=tmft)
+    loader = data.DataLoader(sd, batch_size=32, shuffle=True)
+    print(sd.__getitem__(0))
