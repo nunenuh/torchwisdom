@@ -6,7 +6,8 @@ from torchvision import transforms
 
 __all__ = ['PairCompose', 'PairResize', 'PairCenterCrop', 'PairColorJitter', 'PairPad',
            'PairRandomAffine', 'PairRandomApply', 'PairRandomCrop', 'PairRandomHorizontalFlip',
-           'PairRandomResizedCrop', 'PairRandomRotation', 'PairRandomVerticalFlip','PairGrayscale']
+           'PairRandomResizedCrop', 'PairRandomRotation', 'PairRandomVerticalFlip','PairGrayscale'
+           'PairToTensor']
 
 _pil_interpolation_to_str = {
     Image.NEAREST: 'PIL.Image.NEAREST',
