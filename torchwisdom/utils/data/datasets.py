@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import PIL
 import PIL.Image
+from torchwisdom.transforms import transforms as ptransforms
 
 
 class SiamesePairDataset(data.Dataset):
@@ -101,7 +102,10 @@ class SiamesePairDataset(data.Dataset):
         len_spair = self._len_similar_pair()
         for idx, (kp, kvo) in enumerate(pair_dircomp):
             val_pri = fmap[kp]
-            num_sample = len(val_pri) // 4
+            if len(val_pri)>=4:
+                num_sample = len(val_pri) // 4
+            else:
+                num_sample = len(val_pri)
 
             pair_sampled.update({kp: []})
             for vp in val_pri:
@@ -113,7 +117,10 @@ class SiamesePairDataset(data.Dataset):
                     for vo in vov:
                         fo = os.path.join(ko, vo)
                         pair.append(((fp, fo), 1))
-                    mout = random.sample(pair, num_sample)
+                    if len(pair)>num_sample:
+                        mout = random.sample(pair, num_sample)
+                    else:
+                        mout = pair
                     pair_sampled[kp].append(mout)
 
         for key in pair_sampled.keys():
@@ -123,8 +130,12 @@ class SiamesePairDataset(data.Dataset):
             for va in val:
                 for v in va:
                     tmp_val.append(v)
-            pair_sampled[key] = random.sample(tmp_val, num_sample)
 
+
+            if len(tmp_val)>num_sample:
+                pair_sampled[key] = random.sample(tmp_val, num_sample)
+            else:
+                pair_sampled[key] = tmp_val
         return pair_sampled
 
     def _pair_files(self):
@@ -154,11 +165,12 @@ class SiamesePairDataset(data.Dataset):
 
 
 if __name__ == '__main__':
-    tmft = transforms.Compose([
-        transforms.RandomRotation(10),
-        transforms.ToTensor(),
+    train_tmft = ptransforms.PairCompose([
+        ptransforms.PairResize((220)),
+        ptransforms.PairRandomRotation(20),
+        ptransforms.PairToTensor(),
     ])
-    root = '/data/att_faces'
-    sd = SiamesePairDataset(root, ext="pgm", transform=tmft)
-    loader = data.DataLoader(sd, batch_size=32, shuffle=True)
+    root = '/data/att_faces_new/valid'
+    sd = SiamesePairDataset(root, ext="pgm", pair_transform=train_tmft)
+    # loader = data.DataLoader(sd, batch_size=32, shuffle=True)
     print(sd.__getitem__(0))
