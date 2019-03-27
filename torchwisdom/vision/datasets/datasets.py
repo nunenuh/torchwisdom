@@ -2,15 +2,10 @@ import os
 import random
 import pathlib
 
-import torch
 import torch.utils.data as data
-import torchvision
-from torchvision import transforms
-import numpy as np
-import pandas as pd
 import PIL
 import PIL.Image
-from torchwisdom.transforms import transforms as ptransforms
+from torchwisdom.vision.transforms import transforms as ptransforms
 
 
 class SiamesePairDataset(data.Dataset):
