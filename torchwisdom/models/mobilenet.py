@@ -240,13 +240,13 @@ class MobileNetV2(nn.Module):
 
 # ================================================ end ===============================================================#
 
-def mobilenetv1(pretrained=True,):
-    model = MobileNetV1(in_chan=3)
+def mobilenetv1(pretrained=True, in_chan=3):
+    model = MobileNetV1(in_chan=in_chan)
 
     return model
 
-def mobilenetv2(pretrained=True,):
-    model = MobileNetV2(in_chan=3)
+def mobilenetv2(pretrained=True,in_chan=3):
+    model = MobileNetV2(in_chan=in_chan)
     return model
 
 
