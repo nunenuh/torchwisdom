@@ -1,6 +1,8 @@
 from torchwisdom.callback.callback import Callback
 from typing import *
 from torchwisdom.trainer import Trainer
+import torch.optim as optim
+optim.lr_scheduler.ReduceLROnPlateau
 
 class LRSchedulerCallback(Callback):
 
@@ -8,6 +10,12 @@ class LRSchedulerCallback(Callback):
         pass
 
     def on_epoch_begin(self, trainer: Trainer):
+        pass
+
+
+class ReduceLROnPlateauCallback(Callback):
+
+    def step(self):
         pass
 
 
