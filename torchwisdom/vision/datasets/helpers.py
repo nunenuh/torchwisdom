@@ -6,16 +6,20 @@ import logging
 from tqdm import tqdm
 
 class ImagesMeanStdFinder(object):
+    """  Class for find mean and std from image folder dataset """
     files: list
 
     def __init__(self, root: str, ext: str="jpg"):
+        """
+        :param root: base path from your image directory
+        :param ext: jpg, pgm, png etc
+        """
         self.path: Path = Path(root)
         self.files: list = sorted(list(self.path.glob("*/*."+ext)))
         assert len(self.files)!=0, "Files not found, are you sure your root path or ext is correct?"
         self.images = None
         self._mean = None
         self._std = None
-
 
     def _image_to_tensor(self, img_path: str)->torch.Tensor:
         image = Image.open(img_path)
@@ -30,7 +34,12 @@ class ImagesMeanStdFinder(object):
             progress_bar .refresh()
         return images
 
-    def find_mean_std(self, verbose=False)->dict:
+    def find_mean_std(self, verbose: bool = False)->dict:
+        """
+        find mean and std from path that has been supplied
+        :type verbose: bool
+        :return dict: dictionary with key mean and std
+        """
         if verbose:
             logging.getLogger().setLevel(logging.INFO)
         logging.info(f"Preapare to load all data from {str(self.path)}, it can take a while...")
@@ -62,13 +71,20 @@ class ImagesMeanStdFinder(object):
 
         logging.info(f"Calculate mean and std finished")
 
-
         return {'mean': mean, 'std': std}
 
-    def mean(self):
+    def mean(self)->tuple:
+        """
+        get mean that has been executed with method find_mean_std
+        :return tuple
+        """
         return self._mean
 
     def std(self):
+        """
+        get std that has been executed with method find_mean_std
+        :return tuple
+        """
         return self._std
 
 
@@ -79,9 +95,6 @@ if __name__ == '__main__':
     ims = ImagesMeanStdFinder(root, ext="jpg")
     result = ims.find_mean_std()
     print(result)
-
-
-
 
 
 
