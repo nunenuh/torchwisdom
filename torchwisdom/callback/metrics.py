@@ -41,3 +41,4 @@ class AccuracyThresholdCallback(AverageMetricsCallback):
     def on_backward_end(self, y_pred:torch.Tensor, y_true:torch.Tensor):
         self.metric.update(M.accuracy_threshold(y_pred, y_true, self.threshold, self.sigmoid))
 
+
