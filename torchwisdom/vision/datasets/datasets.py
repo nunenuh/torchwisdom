@@ -1,6 +1,8 @@
 import os
 import random
 import pathlib
+from bisect import insort_right
+from collections import defaultdict
 
 import torch.utils.data as data
 import PIL
@@ -41,68 +43,41 @@ class SiamesePairDataset(data.Dataset):
         return im1, im2, sim
 
     def _files_mapping(self):
-        dct = {}
+        dct = defaultdict(list)
         for f in self.files:
-            spl = str(f).split('/')
-            dirname = spl[-2]
-            filename = spl[-1]
-            if dirname not in dct.keys():
-                dct.update({dirname: [filename]})
-            else:
-                dct[dirname].append(filename)
-                dct[dirname] = sorted(dct[dirname])
+            dirname = f.parent.name
+            filename = f.name
+            insort_right(dct[dirname], filename)
         return dct
 
     def _similar_pair(self):
         fmap = self.files_map
-        atp = {}
-        c = 0
-        for key in fmap.keys():
-            atp.update({key: []})
-            n = len(fmap[key])
-            ctp = ((n - 1) * n) + n
+        atp = defaultdict(list)
+        for _dir in fmap.keys():
+            n = len(fmap[_dir])
             for i in range(n):
                 for j in range(n):
-                    fp = os.path.join(key, fmap[key][i])
-                    fo = os.path.join(key, fmap[key][j])
-                    atp[key].append(((fp, fo), 0))
+                    fp = os.path.join(_dir, fmap[_dir][i])
+                    fo = os.path.join(_dir, fmap[_dir][j])
+                    atp[_dir].append(((fp,fo),0))
         return atp
 
     def _len_similar_pair(self):
-        fmap = self.files_map
-        dct = {}
         spair = self._similar_pair()
-        for key in fmap.keys():
-            dd = {key: len(spair[key])}
-            dct.update(dd)
-        return dct
+        return {key: len(spair[key]) for key in spair}
 
     def _diff_pair_dircomp(self):
         fmap = self.files_map
-        dirname = list(fmap.keys())
-        pair_dircomp = []
-        for idx in range(len(dirname)):
-            dirtmp = dirname.copy()
-            dirtmp.pop(idx)
-            odir = dirtmp
-            pdir = dirname[idx]
-            pdc = (pdir, odir)
-            pair_dircomp.append(pdc)
-        return pair_dircomp
+        return [(_class, list(filter(lambda other_class: other_class is not _class, fmap))) for _class in fmap]
 
     def _different_pair(self):
         fmap = self.files_map
-        pair_sampled = {}
+        pair_sampled = defaultdict(list)
         pair_dircomp = self._diff_pair_dircomp()
         len_spair = self._len_similar_pair()
         for idx, (kp, kvo) in enumerate(pair_dircomp):
             val_pri = fmap[kp]
-            if len(val_pri)>=4:
-                num_sample = len(val_pri) // 4
-            else:
-                num_sample = len(val_pri)
-
-            pair_sampled.update({kp: []})
+            num_sample = len(val_pri) // 4 if len(val_pri) >= 4 else len(val_pri)
             for vp in val_pri:
                 # get filename file primary
                 fp = os.path.join(kp, vp)
@@ -126,8 +101,7 @@ class SiamesePairDataset(data.Dataset):
                 for v in va:
                     tmp_val.append(v)
 
-
-            if len(tmp_val)>num_sample:
+            if len(tmp_val) > num_sample:
                 pair_sampled[key] = random.sample(tmp_val, num_sample)
             else:
                 pair_sampled[key] = tmp_val
