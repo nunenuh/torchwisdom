@@ -200,6 +200,23 @@ class MSLECallback(AverageMetricsCallback):
         self.metric_valid.update(M.mean_squared_logarithmic_error(y_pred, y_true).item())
         self.valid_update()
 
+class DiceCoefCallback(AverageMetricsCallback):
+    def __init__(self):
+        super(DiceCoefCallback, self).__init__()
+        self.name = 'dice_loss'
+
+    def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_train.update(M.dice_coeff(y_pred, y_true).item())
+        self.train_update()
+
+    def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_valid.update(M.dice_coeff(y_pred, y_true).item())
+        self.valid_update()
+
 
 if __name__ == '__main__':
     LossCallback()
