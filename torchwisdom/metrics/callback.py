@@ -200,6 +200,7 @@ class MSLECallback(AverageMetricsCallback):
         self.metric_valid.update(M.mean_squared_logarithmic_error(y_pred, y_true).item())
         self.valid_update()
 
+
 class DiceCoefCallback(AverageMetricsCallback):
     def __init__(self):
         super(DiceCoefCallback, self).__init__()

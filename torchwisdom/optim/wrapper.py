@@ -97,7 +97,7 @@ class OptimizerWrapper(object):
                 build.append(par)
             return build
         else:
-            return parameters
+            return self.model.parameters()
 
     def _lr_every(self, param, lr):
         param_len = len(param)

@@ -1,13 +1,41 @@
-import torchvision.models.squeezenet as squeezenet
+from torchwisdom.metrics.callback import *
+from torchwisdom.optim.callback import *
+from torchwisdom.metrics import *
+from torchwisdom.callback import *
+from torchwisdom.statemgr.callback import StateManagerCallback
+from torchwisdom.utils.data.collector import *
+from torch.optim.optimizer import Optimizer
+from torchwisdom.trainer import *
+from torchwisdom.vision.trainer.trainer import *
 
-model = squeezenet.squeezenet1_1(num_classes=50)
-x = torch.randn(2,3,224,224)
+if __name__ == '__main__':
+    from torchwisdom.vision.models import mobilenetv2
+    from torchvision.datasets.mnist import MNIST
+    import torchvision.transforms as transforms
+    from torchwisdom.utils.data.collector import DatasetCollector
+    import torch.optim as optim
+    import torch.nn as nn
 
-x = model.features(x)
-print(x.shape)
+    train_path = '/data/MNIST/train'
+    valid_path = '/data/MNIST/valid'
 
-x = model.classifier(x)
-print(x.shape)
+    tmft = transforms.Compose([
+        transforms.Resize(224),
+        transforms.ToTensor()
+    ])
 
-x = x.view(x.size(0), 50)
-print(x.shape)
+    trainset = MNIST(train_path, train=True, transform=tmft, download=False)
+    validset = MNIST(valid_path, train=False, transform=tmft, download=False)
+
+    data = DatasetCollector(trainset, validset)
+    model = mobilenetv2(pretrained=False, in_chan=1)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(model.parameters(), lr=0.001, )
+    scheduler = StepLRCallback(optimizer, step_size=30)
+
+    trainer = ConvTrainer(data=data, model=model, criterion=criterion, optimizer=optimizer, callbacks=[scheduler])
+    trainer.fit(1)
+
+    # print(data.bunch())
+    # print()
+    # test(name='fandi')

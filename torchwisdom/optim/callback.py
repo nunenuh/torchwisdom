@@ -41,7 +41,6 @@ class StepLRCallback(_LRSchedulerCallback):
         self.scheduler = lr_scheduler.StepLR(self.optimizer, self.step_size, self.gamma, self.last_epoch)
 
 
-
 class MultiStepLRCallback(_LRSchedulerCallback):
     def __init__(self,  milestones: list, gamma: float = 0.1,
                  last_epcoch: int = -1, *args: Any, **kwargs: Any)->Any:
