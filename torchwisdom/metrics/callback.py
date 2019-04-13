@@ -129,6 +129,24 @@ class AccuracyThresholdCallback(AverageMetricsCallback):
         self.valid_update()
 
 
+class ErrorRateCallback(AverageMetricsCallback):
+    def __init__(self):
+        super(ErrorRateCallback, self).__init__()
+        self.name = 'error_rate'
+
+    def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_train.update(M.error_rate(y_pred, y_true).item())
+        self.train_update()
+
+    def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_valid.update(M.mean_absolute_error(y_pred, y_true).item())
+        self.valid_update()
+
+
 class MAECallback(AverageMetricsCallback):
     def __init__(self):
         super(MAECallback, self).__init__()
