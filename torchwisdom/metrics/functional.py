@@ -5,8 +5,13 @@ import torch.nn.functional as F
 from torchwisdom import core
 
 
+__all__ = ['accuracy', 'accuracy_topk', 'accuracy_threshold', 'error_rate', 'dice_coeff',
+           'mean_absolute_error', 'mean_squared_error', 'root_mean_squared_error',
+           'mean_squared_logarithmic_error']
+
+
 # taken from https://github.com/pytorch/examples/blob/master/imagenet/main.py
-def accuracy_topk(y_pred: Tensor, y_true: Tensor, topk: tuple=(1,)) -> Tensor:
+def accuracy_topk(y_pred: Tensor, y_true: Tensor, topk: tuple = (1,)) -> Tensor:
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
         maxk = max(topk)
@@ -28,19 +33,19 @@ def accuracy(y_pred: Tensor, y_true: Tensor):
     bsize = y_pred.size(0)
     y_pred = y_pred.argmax(dim=-1).view(bsize, -1)
     y_true = y_true.view(bsize, -1)
-    acc = y_pred==y_true
+    acc = y_pred == y_true
     return acc.float().mean()
 
 
 # idea and code  got from https://github.com/fastai/fastai/blob/master/fastai/metrics.py#L30
-def accuracy_threshold(y_pred:Tensor, y_true:Tensor, thresh:float=0.5, sigmoid:bool=False) -> Tensor:
+def accuracy_threshold(y_pred: Tensor, y_true: Tensor, thresh: float = 0.5, sigmoid: bool = False) -> Tensor:
     if sigmoid: y_pred = F.sigmoid(y_pred)
     y_thresh = y_pred > thresh
     acc = y_thresh==y_true.byte()
     return acc.float().mean()
 
 
-def error_rate(y_pred: Tensor, y_true:Tensor) -> Tensor:
+def error_rate(y_pred: Tensor, y_true: Tensor) -> Tensor:
     return 1 - accuracy(y_pred, y_true)
 
 
@@ -48,7 +53,7 @@ def error_rate(y_pred: Tensor, y_true:Tensor) -> Tensor:
 # https://github.com/pytorch/pytorch/issues/1249
 # github.com/jeffwen/road_building_extraction/blob/master/src/utils/callback.py
 # and other source
-def dice_coeff(y_pred: Tensor, y_true: Tensor, smooth: float=1.):
+def dice_coeff(y_pred: Tensor, y_true: Tensor, smooth: float = 1.) -> Tensor:
     y_pred, y_true = core.flatten_check(y_pred, y_true)
     intersection = (y_pred * y_true).sum()
     return 1 - (2. * intersection + smooth) / (y_pred.sum() + y_true.sum() + smooth)
@@ -61,13 +66,16 @@ def mean_absolute_error(y_pred: Tensor, y_true: Tensor) -> Tensor:
     return torch.abs(y_true-y_pred).mean()
 
 
-def mean_squared_error(y_pred: Tensor, y_true: Tensor, size_average=None, reduce=None, reduction='mean') -> Tensor:
-    if not core.is_flatten_same_dim(y_pred, y_true): y_pred = core.flatten_argmax(y_pred)
+def mean_squared_error(y_pred: Tensor, y_true: Tensor,
+                       size_average: Any = None, reduce: Any = None, reduction: str = 'mean') -> Tensor:
+    if not core.is_flatten_same_dim(y_pred, y_true):
+        y_pred = core.flatten_argmax(y_pred)
     y_pred, y_true = core.flatten_check(y_pred, y_true)
     return F.mse_loss(y_pred, y_true, size_average, reduce, reduction)
 
 
-def root_mean_squared_error(y_pred: Tensor, y_true: Tensor, size_average=None, reduce=None, reduction='mean') -> Tensor:
+def root_mean_squared_error(y_pred: Tensor, y_true: Tensor,
+                            size_average: Any = None, reduce: Any = None, reduction: str = 'mean') -> Tensor:
     y_pred, y_true = core.flatten_check(y_pred, y_true)
     torch.sqrt(mean_squared_error(y_pred, y_true, size_average, reduce, reduction))
 
@@ -76,3 +84,4 @@ def mean_squared_logarithmic_error(y_pred: Tensor, y_true: Tensor) -> Tensor:
     y_pred, y_true = core.flatten_check(y_pred, y_true)
     y_pred, y_true = torch.log(1+y_pred), torch.log(1+y_true)
     return F.mse_loss(y_pred, y_true)
+
