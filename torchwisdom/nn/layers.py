@@ -2,13 +2,16 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-__all__ = ['Flatten','AdaptiveConcatPool2d','Classfiers', 'SimpleClassifiers']
+
+__all__ = ['Flatten', 'AdaptiveConcatPool2d', 'Lambda', 'SimpleClassifiers', 'SqueezeNetCustomClassifers']
+
 
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
     def forward(self, x):
         return x.view(x.size(0), -1)
+
 
 # got from fastai
 class AdaptiveConcatPool2d(nn.Module):
@@ -19,6 +22,7 @@ class AdaptiveConcatPool2d(nn.Module):
         sz = sz or 1
         self.ap,self.mp = nn.AdaptiveAvgPool2d(sz), nn.AdaptiveMaxPool2d(sz)
     def forward(self, x): return torch.cat([self.mp(x), self.ap(x)], 1)
+
 
 #got from fastai
 class Lambda(nn.Module):
@@ -72,9 +76,10 @@ class SimpleClassifiers(nn.Module):
         x = self.fc(x)
         return x
 
-class SqueezeNetCustomClassifers(nn.Module):
+
+class SqueezeNetCustomClassifiers(nn.Module):
     def __init__(self, num_classes=1000):
-        super(SqueezeNetCustomClassifers, self).__init__()
+        super(SqueezeNetCustomClassifiers, self).__init__()
         self.num_classes = num_classes
         final_conv = nn.Conv2d(512, self.num_classes, kernel_size=1)
         self.classifiers = nn.Sequential(
