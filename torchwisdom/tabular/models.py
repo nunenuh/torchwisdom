@@ -43,15 +43,5 @@ class MultilayerNet(nn.Module):
 
 
 
-if __name__ == '__main__':
-    inp = torch.rand(2, 3)
-    snet = SimpleNet(num_in_feat=3, num_hid_feat=9, num_out_feat=1)
-    out = snet.forward(inp)
-    # print(out)
-
-    inp2 = torch.rand(2, 3)
-    mnet = MultilayerNet(num_in_feat=3, num_hid_layer=2, num_hid_feat=16, num_out_feat=3)
-    out2 = mnet.forward(inp2)
-    print(out2)
 
 
