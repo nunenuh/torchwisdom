@@ -37,7 +37,7 @@ class AverageMetricsCallback(Callback):
     def update_epoch_state(self, mode):
         metric_state: MetricState = self.statemgr.get_state('metric')
         state = metric_state.get_property(mode).get(self.name)
-        mean = torch.Tensor(state.get('mean')).mean().item()
+        mean = state.get('mean')[-1]
         state.get('epoch').append(mean)
 
     def get_metric(self, mode) -> AverageMetrics:
