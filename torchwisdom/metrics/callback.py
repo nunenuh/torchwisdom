@@ -148,7 +148,7 @@ class ErrorRateCallback(AverageMetricsCallback):
     def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred: Tensor = kwargs.get('y_pred')
         y_true: Tensor = kwargs.get('y_true')
-        self.metric_valid.update(M.mean_absolute_error(y_pred, y_true).item())
+        self.metric_valid.update(M.error_rate(y_pred, y_true).item())
         self.valid_update()
 
 
