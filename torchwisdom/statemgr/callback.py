@@ -52,3 +52,18 @@ class StateManagerCallback(Callback):
         epoch_state['remain'].append(tremain)
         epoch_state['curr'] += 1
         statemgr.save()
+
+
+class ModelCheckPointCallback(Callback):
+    def __init__(self):
+        super(ModelCheckPointCallback, self).__init__()
+        self.statemgr: StateManager = None
+
+    def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def on_fit_end(self, *args: Any, **kwargs: Any) -> None:
+        pass
+
+    def on_epoch_end(self, *args: Any, **kwargs: Any) -> None:
+        pass
