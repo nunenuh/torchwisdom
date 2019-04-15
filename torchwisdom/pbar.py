@@ -1,4 +1,5 @@
 from fastprogress import master_bar, progress_bar
+from fastprogress.fastprogress import isnotebook
 from torchwisdom.callback import Callback
 from typing import *
 from torchwisdom.statemgr.manager import StateManager
@@ -79,13 +80,17 @@ class ProgressBarCallback(Callback):
         tdelta, tremain = time_delta_remain(epoch_state)
 
         line = line_builder(metric_state, epoch, tdelta, tremain)
-        mbar.write(line, table=True)
+        if isnotebook():
+            mbar.write(line, table=True)
+        else:
+            mbar.write(line, table=False)
 
         epoch_curr = trainer_state.get_property('epoch')['curr']
         if epoch_curr > 1:
             graph = graph_builder(metric_state, trainer_state)
             mbar.names = ['trn_loss', 'val_loss']
-            mbar.update_graph(graph)
+            if isnotebook():
+                mbar.update_graph(graph)
 
     def on_train_batch_end(self, *args: Any, **kwargs: Any) -> None:
         mbar: master_bar = kwargs.get('master_bar')
@@ -102,4 +107,7 @@ class ProgressBarCallback(Callback):
         if epoch_curr == 0: # show header for first time
             metric_state: MetricState = self.statemgr.get_state('metric')
             line = line_head_builder(metric_state)
-            mbar.write(line, table=True)
+            if isnotebook():
+                mbar.write(line, table=True)
+            else:
+                mbar.write(line, table=False)
