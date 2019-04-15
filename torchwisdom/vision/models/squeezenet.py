@@ -36,7 +36,6 @@ def squeezenet(pretrained=True, in_feat=3, version=1.1, num_classes=1000, **kwar
         raise ValueError(f'When using pretrained=True, in_feat value is expected to be 3 but got {str(in_feat)}')
 
     seqver = 'squeezenet'+'_'.join(str(version).split("."))
-    print(seqver)
     net = SqueezeNet(in_feat=in_feat, version=version, **kwargs)
     if pretrained:
         net.load_state_dict(model_zoo.load_url(model_urls[seqver]))
