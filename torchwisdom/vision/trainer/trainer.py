@@ -5,8 +5,11 @@ from torchwisdom.utils.data.collector import *
 from torch.optim.optimizer import Optimizer
 from torchwisdom.trainer import *
 from torchwisdom.envi import *
-
+from typing import *
 from fastprogress import master_bar, progress_bar
+import torch.nn as nn
+import torch
+import torch.optim as optim
 
 __all__ = []
 
@@ -53,16 +56,16 @@ class ConvTrainer(Trainer):
         self.model.train()
         train_loader = self.bunch['train']
         trainbar = progress_bar(train_loader, parent=mbar)
-        for idx, (img, label) in enumerate(trainbar):
+        for idx, (feature, target) in enumerate(trainbar):
             self.cb_handler.on_train_batch_begin(batch_curr=idx, master_bar=mbar)
 
-            img = img.to(device=self.device)
-            label = label.to(device=self.device)
+            feature = feature.to(device=self.device)
+            target = target.to(device=self.device)
 
-            self.cb_handler.on_train_forward_begin(feature=img, target=label)
-            out = self.model(img)
-            loss = self.criterion(out, label)
-            self.cb_handler.on_train_forward_end(loss=loss, y_pred=out, y_true=label, )
+            self.cb_handler.on_train_forward_begin(feature=feature, target=target)
+            out = self.model(feature)
+            loss = self.criterion(out, target)
+            self.cb_handler.on_train_forward_end(loss=loss, y_pred=out, y_true=target, )
 
             self.cb_handler.on_train_backward_begin()
             self.optimizer.zero_grad()
@@ -79,15 +82,15 @@ class ConvTrainer(Trainer):
         valid_loader = self.bunch['valid']
         progbar = progress_bar(valid_loader, parent=mbar)
         with torch.no_grad():
-            for idx, (img, label) in enumerate(progbar):
+            for idx, (feature, target) in enumerate(progbar):
                 self.cb_handler.on_validate_batch_begin(batch_curr=idx, master_bar=mbar)
-                img = img.to(device=self.device)
-                label = label.to(device=self.device)
+                feature = feature.to(device=self.device)
+                target = target.to(device=self.device)
 
-                self.cb_handler.on_validate_forward_begin(feature=img, target=label, )
-                out = self.model(img)
-                loss = self.criterion(out, label)
-                self.cb_handler.on_validate_forward_end(loss=loss, y_pred=out, y_true=label, )
+                self.cb_handler.on_validate_forward_begin(feature=feature, target=target, )
+                out = self.model(feature)
+                loss = self.criterion(out, target)
+                self.cb_handler.on_validate_forward_end(loss=loss, y_pred=out, y_true=target, )
 
                 self.cb_handler.on_validate_batch_end( master_bar=mbar)
         self.cb_handler.on_validate_end(epoch=epoch,  master_bar=mbar)
@@ -114,9 +117,24 @@ class ConvTrainer(Trainer):
         self.cb_handler.on_resume_end()
 
 
-    def freeze(self):
-        pass
+    def freeze(self, last_from: int = -1, last_to: int = None):
+        params = list(self.model.parameters())
+        if last_to == None:
+            for param in params[:last_from]:
+                param.requires_grad = False
+
+            for param in params[last_from:]:
+                param.requires_grad = True
+        else:
+            for param in params[:last_to]:
+                param.requires_grad = False
+
+            for param in params[last_from:last_to]:
+                param.requires_grad = True
+
 
     def unfreeze(self):
-        pass
+        params = self.model.parameters()
+        for param in params:
+            param.requires_grad = True
 
