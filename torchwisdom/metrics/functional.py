@@ -1,7 +1,7 @@
 import torch
 from torch import Tensor
-from typing import *
 import torch.nn.functional as F
+from typing import *
 from torchwisdom import core
 
 
