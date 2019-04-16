@@ -33,17 +33,26 @@ def line_builder(metric_state: MetricState, epoch, tdelta, tremain):
         line.append(f"{valid[key]['mean'][-1]:.6f}")
     line.append(f'{tdelta}')
     line.append(f'{tremain}')
-    return line
+
+    if isnotebook():
+        return line
+    else:
+        return '\t'.join(line)
 
 def line_head_builder(metric_state: MetricState):
     train: Dict = metric_state.get_property('train')
+
     line = ['epoch']
     for val in train.keys():
         line.append(f'trn_{val}')
         line.append(f'val_{val}')
     line.append('time')
     line.append('remain')
-    return line
+
+    if isnotebook():
+        return line
+    else:
+        return '\t'.join(line)
 
 
 def graph_builder(metric_state: MetricState, trainer_state: TrainerState):
