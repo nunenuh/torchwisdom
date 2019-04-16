@@ -1,239 +1,178 @@
 import torch
 from typing import *
+import random
+import hashlib
+import pandas as pd
+import os
 from pathlib import Path
-import datetime
 
 
-class StateBase(object):
-
-    def current_data(self):
-        raise NotImplementedError()
-
-    def set_data(self, data: Any):
-        raise NotImplementedError()
-
-    def get_data(self) -> Any:
-        raise NotImplementedError()
-
-    def set_property(self, prop: str, value: Any):
-        raise NotImplementedError()
-
-    def get_property(self, prop: str) -> Any:
-        raise NotImplementedError()
+__all__ = ['Store', 'Logger', 'StateManager']
 
 
-class StateStore(object):
+wisdom_home = Path.home().joinpath('.torchwisdom')
+state_home = wisdom_home.joinpath('state')
+logger_file = state_home.joinpath('main.csv')
 
+
+class Store(object):
     def __init__(self, data={}):
-        self.data = data
-        self.name: str = ''
-        self.manager_id: str = ''
-        self.base_path: Path = None
+        self.state = data
 
-    def save(self):
-        if self.base_path:
-            path = self.base_path.joinpath(self.name+'.pt')
-            # print(f'save to {self.data["name"]} {str(path)}')
-            torch.save(self.data, str(path))
+    def save(self, filename, state):
+        path = state_home.joinpath(filename)
+        torch.save(state, str(path))
+
+    def load(self, filename,  map_location: Any = None) -> Any:
+        path = state_home.joinpath(filename)
+        if path.exists() and path.is_file():
+            self.state = torch.load(str(path), map_location=map_location)
+            return self.state
         else:
-            raise ValueError("base_path is None, expected to have base_path from StateManager")
-
-    def load(self, base_path: Any = None,  map_location: Any = None) -> Any:
-        if base_path:
-            self.base_path = base_path
-
-        if self.base_path:
-            path = self.base_path.joinpath(self.name + '.pt')
-            if path.exists() and path.is_file():
-                self.data = torch.load(str(path), map_location=map_location)
-                return self.data
-            else:
-                raise FileNotFoundError("File {str(path)} is not found")
-        else:
-            raise ValueError("base_path is None, expected to have base_path from StateManager")
+            raise FileNotFoundError(f"File {str(path)} is not found")
 
 
-    def set_base_path(self, base_path):
-        self.data['base_path'] = str(base_path)
-        self.base_path = base_path
-
-    def set_manager_id(self, id):
-        self.data['manager_id'] = id
-        self.manager_id = id
-
-
-class State(StateBase, StateStore):
-    """ State Recorder """
-
+class Logger(object):
     def __init__(self):
-        super(State, self).__init__()
-        self.data: Dict = {}
+        super(Logger, self).__init__()
+        self._dataframe = self._get_dataframe()
+
+    def dataframe(self):
+        return self._dataframe
+
+    def add(self, id, name='', desc=''):
+        file = logger_file
+        row = {'id': id, 'name': name, 'desc': desc, 'datetime': str(datetime.datetime.now())}
+        self._dataframe = self._dataframe.append(row, ignore_index=True)
+        self._dataframe.to_csv(str(file), index=None, header=True)
+
+    def get(self, idx) -> pd.DataFrame:
+        return self._dataframe.iloc[idx]
+
+    def last(self) -> pd.DataFrame:
+        return self._dataframe.iloc[-1]
+
+    def find(self, id):
+        pass
+
+    def find_by(self, field='name', value=""):
+        pass
+
+    def _get_dataframe(self) -> pd.DataFrame:
+        file = logger_file
+        path = state_home
+
+        if not file.exists():
+            os.makedirs(str(path), exist_ok=True)
+            df = self._build_csv()
+            df.to_csv(str(file), index=None, header=True)
+            print(f"build for the first time in {str(file)}")
+            return df
+        else:
+            return pd.read_csv(file)
+
+    def _build_csv(self):
+        data = {'id': [], 'name': [], 'desc': [], 'datetime': []}
+        return pd.DataFrame(data, columns=['id', 'name', 'desc', 'datetime'])
+
+
+class StateManager(object):
+    def __init__(self):
+        super(StateManager, self).__init__()
+        self._state: Dict = None
+        self._store = Store()
+        self._logger = Logger()
+        self.id: str = random_generator()
         self.name: str = ''
-        self.manager_id: str = ''
-        self.base_path: Path = None
+        self.desc: str = ''
+        self._build_defaults_state()
 
-    def current_data(self):
-        return self.data
+    def dataframe(self) -> pd.DataFrame:
+        return self._logger.dataframe()
 
-    def get_data(self)->Any:
-        return self.data
+    def logger(self) -> Logger:
+        return self._logger
 
-    def set_data(self, data):
-        self.data = data
+    def store(self) -> Store:
+        return self._store
 
-    def get_property(self, prop) -> Union[Any, Dict, List]:
-        if prop in self.data.keys():
-            return self.data[prop]
-        else:
-            raise ValueError(f"prop {prop} not found!")
+    @property
+    def state(self) -> Dict:
+        return self._state
 
-    def propery_exist(self, prop):
-        if prop in self.data.keys():
-            return True
-        else:
-            return False
+    def load(self, id):
+        filename = id + ".pt"
+        self._state = self.store().load(filename)
+        self.id = id
+        return self._state
 
-    def set_property(self, prop, value):
-        self.data[prop] = value
+    def load_last(self):
+        id = self.logger().last()['id']
+        filename = id+".pt"
+        self._state = self.store().load(filename)
+        self.id = id
 
-    def get_name(self):
-        return self.name
+    def save(self, name='', desc=''):
+        filename = self.id + ".pt"
+        self.store().save(filename, self._state)
+        self.logger().add(self.id, name=name, desc=desc)
 
-    def set_name(self, name):
-        self.name = name
-
-
-class DatasetState(State):
-    """ Dataset State for storing information base on dataset """
-
-    def __init__(self, name: str = 'dataset'):
-        super(DatasetState, self).__init__()
-        self.name = name
-        self._init_data()
-
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
-
-
-class DataLoaderState(State):
-    """ Dataset State for storing information base on dataset """
-
-    def __init__(self, name: str = 'dataset'):
-        super(DataLoaderState, self).__init__()
-        self.name = name
-        self._init_data()
-
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
-
-
-class DataCollectorState(State):
-    """ Dataset State for storing information base on dataset """
-
-    def __init__(self, name: str = 'datacoll'):
-        super(DataCollectorState, self).__init__()
-        self.name = name
-        self._init_data()
-
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
-        self.data['train'] = {
-            'dataset': {'path': '', 'len': 0},
-            'loader': {}
+    def _build_defaults_state(self):
+        self._state = {
+            "data": {
+                "dataset": {"trainset": {}, "validset": {}, "testset": {}},
+                "dataloader": {"train_loader": {}, "valid_loader": {}},
+                "num_workers":0,
+                "shuffle": True,
+            },
+            "model": {
+                "state_dict": None,
+                "arch": None,
+                "object": None,
+            },
+            "metric": {
+                "train": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}},
+                "valid": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}},
+                "test": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}}
+            },
+            "optimizer": {},
+            "scheduler": {},
+            "trainer": {
+                "id": "",
+                "name": "",
+                "desc": "",
+                "epoch": {'start': 0, 'curr': 0, 'num': 0, 'time': [], 'time_start': 0, 'time_end': 0, 'remain': []},
+                "created": "",
+                "modified": ""
+            }
         }
-        self.data['valid'] = {
-            'dataset': {'path': '', 'len': 0},
-            'loader': {}
-        }
-        self.data['test'] = {
-            'dataset': {'path': '', 'len': 0},
-            'loader': {}
-        }
-        self.data['batch_size'] = 0
-        self.data['num_worker'] = 0
-        self.data['shuffle'] = True
 
 
-
-class ModelState(State):
-    def __init__(self, name: str = 'model'):
-        super(ModelState, self).__init__()
-        self.name = name
-        self._init_data()
-
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
+def random_generator():
+    h = hashlib.new('ripemd160')
+    id_encode = str(random.randint(111111111111, 999999999999)).encode()
+    h.update(id_encode)
+    hid = h.hexdigest()
+    return hid
 
 
-class OptimizerState(State):
-    def __init__(self, name: str = 'optimizer'):
-        super(OptimizerState, self).__init__()
-        self.name = name
-        self._init_data()
+if __name__ == '__main__':
 
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
+    # ds1 = DatasetState('trainset')
+    # ds2 = DatasetState('validset')
+    # print(ds1.data['name'], ds2.data['name'])
+    sm = StateManager()
 
+    # sm.add_state([ds1, ds2])
+    sm.set_id('4d95e6fcc0bf0b02badcd41370d53ff2e4e1d0e9')
+    # print(sm.states)
+    # print(sm.state_dict())
+    sm.save()
 
-class SchedulerState(State):
-    def __init__(self, name: str = 'optimizer'):
-        super(SchedulerState, self).__init__()
-        self.name = name
-        self._init_data()
+    sm.load()
+    print(sm.states)
+    print(sm.state_dict())
+    print(sm.history.head())
 
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
-
-
-class MetricState(State):
-    def __init__(self, name: str = 'metric'):
-        super(MetricState, self).__init__()
-        self.name = name
-        self._init_data()
-
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
-        self.data['train'] = {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}}
-        self.data['valid'] = {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}}
-
-
-class TrainerState(State):
-    def __init__(self, name: str = 'trainer'):
-        super(TrainerState, self).__init__()
-        self.name = name
-        self._init_data()
-
-    def _init_data(self):
-        self.data['classname'] = self.__class__.__name__
-        self.data['name'] = self.get_name()
-        self.data['created'] = str(datetime.datetime.now())
-        self.data['epoch'] = {'start': 0, 'curr': 0, 'num': 0, 'time': [], 'time_start': 0, 'time_end': 0, 'remain':[]}
-
-
-
-def class_map(classname: str):
-    # classname = classname.strip()
-    if classname == 'DatasetState': return DatasetState()
-    elif classname == "DataLoaderState": return DataLoaderState()
-    elif classname == "DataCollectorState": return DataCollectorState()
-    elif classname == "ModelState": return ModelState()
-    elif classname == "OptimizerState": return OptimizerState()
-    elif classname == "SchedulerState": return SchedulerState()
-    elif classname == "MetricState": return MetricState()
-    elif classname == "TrainerState": return TrainerState()
-    else: return None
+    # sm.dframe_add('4d95e6fcc0bf0b02badcd41370d53ff2e4e1d0e9', 'MyProject')
 

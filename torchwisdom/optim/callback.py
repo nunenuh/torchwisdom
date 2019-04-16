@@ -2,7 +2,7 @@ from torchwisdom.callback import Callback
 from typing import *
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from torchwisdom.statemgr.manager import StateManager
+from torchwisdom.statemgr.state import StateManager
 import torch
 
 

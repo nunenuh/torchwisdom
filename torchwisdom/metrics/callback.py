@@ -1,8 +1,7 @@
 from torchwisdom.metrics.metrics import *
-from torchwisdom.statemgr.state import *
 from torchwisdom.callback import Callback
 import torchwisdom.metrics.functional as M
-from torchwisdom.statemgr.manager import *
+from torchwisdom.statemgr.state import StateManager
 from torchwisdom.core import *
 
 
@@ -20,10 +19,10 @@ class AverageMetricsCallback(Callback):
         self.name = name
 
     def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
-        metric_state: MetricState = self.statemgr.get_state('metric')
-        train: Dict = metric_state.get_property('train')
+        metric_state= self.statemgr.state.get('metric')
+        train: Dict = metric_state.get('train')
         train[self.name] = {'val': [], 'mean': [], 'std': [], 'epoch': []}
-        valid: Dict = metric_state.get_property('valid')
+        valid: Dict = metric_state.get('valid')
         valid[self.name] = {'val': [], 'mean': [], 'std': [], 'epoch': []}
 
     def on_epoch_begin(self, *args: Any, **kwargs: Any):
@@ -35,8 +34,8 @@ class AverageMetricsCallback(Callback):
         self.update_epoch_state('valid')
 
     def update_epoch_state(self, mode):
-        metric_state: MetricState = self.statemgr.get_state('metric')
-        state = metric_state.get_property(mode).get(self.name)
+        metric_state: Dict = self.statemgr.state.get('metric')
+        state = metric_state.get(mode).get(self.name)
         mean = state.get('mean')[-1]
         state.get('epoch').append(mean)
 
@@ -45,8 +44,8 @@ class AverageMetricsCallback(Callback):
         else: return self.metric_valid
 
     def get_state(self, mode) -> Dict:
-        metric_state: MetricState = self.statemgr.get_state('metric')
-        return metric_state.get_property(mode).get(self.name)
+        metric_state: Dict = self.statemgr.state.get('metric')
+        return metric_state.get(mode).get(self.name)
 
     def update_state(self, mode):
         metric = self.get_metric(mode)

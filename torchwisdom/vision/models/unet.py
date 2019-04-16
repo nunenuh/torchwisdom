@@ -101,6 +101,7 @@ class UpConv(nn.Module):
         x = self.conv(x)
         return x
 
+
 class OutConv(nn.Module):
     def __init__(self, in_ch, out_ch, use_upsample=False, mode='bilinear'):
         super(OutConv, self).__init__()

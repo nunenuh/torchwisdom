@@ -2,8 +2,7 @@ from fastprogress import master_bar, progress_bar
 from fastprogress.fastprogress import isnotebook
 from torchwisdom.callback import Callback
 from typing import *
-from torchwisdom.statemgr.manager import StateManager
-from torchwisdom.statemgr.state import MetricState, TrainerState, DataCollectorState
+from torchwisdom.statemgr.state import StateManager
 from datetime import timedelta
 from torchwisdom.core import *
 
@@ -45,9 +44,9 @@ def time_delta_remain(epoch_state):
     return delta, remain
 
 
-def line_builder(metric_state: MetricState, epoch, tdelta, tremain):
-    train: Dict = metric_state.get_property('train')
-    valid: Dict = metric_state.get_property('valid')
+def line_builder(metric_state: Dict, epoch, tdelta, tremain):
+    train: Dict = metric_state.get('train')
+    valid: Dict = metric_state.get('valid')
 
     line = [f'{epoch}']
     for key in train.keys():
@@ -62,8 +61,8 @@ def line_builder(metric_state: MetricState, epoch, tdelta, tremain):
         return build_line_console(line)
 
 
-def line_head_builder(metric_state: MetricState):
-    train: Dict = metric_state.get_property('train')
+def line_head_builder(metric_state: Dict):
+    train: Dict = metric_state.get('train')
 
     line = ['epoch']
     for val in train.keys():
@@ -78,10 +77,10 @@ def line_head_builder(metric_state: MetricState):
         return build_line_console(line)
 
 
-def graph_builder(metric_state: MetricState, trainer_state: TrainerState):
-    train: Dict = metric_state.get_property('train')
-    valid: Dict = metric_state.get_property('valid')
-    epoch_curr = trainer_state.get_property('epoch')['curr']
+def graph_builder(metric_state: Dict, trainer_state: Dict):
+    train: Dict = metric_state.get('train')
+    valid: Dict = metric_state.get('valid')
+    epoch_curr = trainer_state.get('epoch')['curr']
 
     train_loss = train.get('loss').get('epoch')
     valid_loss = valid.get('loss').get('epoch')
@@ -91,7 +90,6 @@ def graph_builder(metric_state: MetricState, trainer_state: TrainerState):
         x = list(range(1, epoch_curr+1))
     graph = [[x, train_loss], [x, valid_loss]]
     return graph
-
 
 
 class ProgressBarCallback(Callback):
@@ -105,10 +103,10 @@ class ProgressBarCallback(Callback):
     def on_epoch_end(self, *args: Any, **kwargs: Any) -> None:
         mbar: master_bar = kwargs.get('master_bar')
         epoch: int = kwargs.get("epoch")
-        trainer_state: TrainerState = self.statemgr.get_state('trainer')
-        metric_state: MetricState = self.statemgr.get_state('metric')
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        metric_state: Dict = self.statemgr.state.get('metric')
 
-        epoch_state: Dict = trainer_state.get_property('epoch')
+        epoch_state: Dict = trainer_state.get('epoch')
         tdelta, tremain = time_delta_remain(epoch_state)
 
         line = line_builder(metric_state, epoch, tdelta, tremain)
@@ -117,7 +115,7 @@ class ProgressBarCallback(Callback):
         else:
             mbar.write(line, table=False)
 
-        epoch_curr = trainer_state.get_property('epoch')['curr']
+        epoch_curr = trainer_state.get('epoch')['curr']
         if epoch_curr > 1:
             graph = graph_builder(metric_state, trainer_state)
             mbar.names = ['trn_loss', 'val_loss']
@@ -134,10 +132,10 @@ class ProgressBarCallback(Callback):
 
     def on_validate_end(self, *args: Any, **kwargs: Any) -> None:
         mbar: master_bar = kwargs.get('master_bar')
-        trainer_state: TrainerState = self.statemgr.get_state('trainer')
-        epoch_curr = trainer_state.get_property('epoch')['curr']
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        epoch_curr = trainer_state.get('epoch')['curr']
         if epoch_curr == 0: # show header for first time
-            metric_state: MetricState = self.statemgr.get_state('metric')
+            metric_state: Dict = self.statemgr.state.get('metric')
             line = line_head_builder(metric_state)
             if isnotebook():
                 mbar.write(line, table=True)
