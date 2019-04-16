@@ -27,7 +27,7 @@ def line_builder(metric_state: MetricState, epoch, tdelta, tremain):
     train: Dict = metric_state.get_property('train')
     valid: Dict = metric_state.get_property('valid')
 
-    line = [epoch]
+    line = [f'{epoch}']
     for key in train.keys():
         line.append(f"{train[key]['mean'][-1]:.6f}")
         line.append(f"{valid[key]['mean'][-1]:.6f}")
