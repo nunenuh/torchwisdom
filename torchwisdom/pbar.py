@@ -16,12 +16,29 @@ class ProgressTable(object):
 def time_formatter(sec, last_cut=-4)->str:
     return str(timedelta(seconds=sec))[:last_cut]
 
+
+def format_text_console(text, empty_space=20):
+    space = "".join([" " for i in range(empty_space-len(text))])
+    out = space+text
+    return out
+
+
+def build_line_console(line, use_tab=False):
+    str_build = ""
+    for ln in line:
+        text = format_text_console(ln)
+        str_build+=text
+        if use_tab: str_build+="\t"
+    return str_build
+
+
 def time_delta_remain(epoch_state):
     delta_last = epoch_state.get('time')[-1]
     delta = time_formatter(delta_last)
     remain_last = epoch_state.get('remain')[-1]
     remain = time_formatter(remain_last)
     return delta, remain
+
 
 def line_builder(metric_state: MetricState, epoch, tdelta, tremain):
     train: Dict = metric_state.get_property('train')
@@ -37,7 +54,8 @@ def line_builder(metric_state: MetricState, epoch, tdelta, tremain):
     if isnotebook():
         return line
     else:
-        return '\t'.join(line)
+        return build_line_console(line)
+
 
 def line_head_builder(metric_state: MetricState):
     train: Dict = metric_state.get_property('train')
@@ -52,7 +70,7 @@ def line_head_builder(metric_state: MetricState):
     if isnotebook():
         return line
     else:
-        return '\t'.join(line)
+        return build_line_console(line)
 
 
 def graph_builder(metric_state: MetricState, trainer_state: TrainerState):
