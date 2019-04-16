@@ -17,16 +17,21 @@ def time_formatter(sec, last_cut=-4)->str:
     return str(timedelta(seconds=sec))[:last_cut]
 
 
-def format_text_console(text, empty_space=20):
-    space = "".join([" " for i in range(empty_space-len(text))])
-    out = space+text
+def format_text(text, empty_space=15):
+    ltext=len(text)
+    if empty_space>ltext:
+        len_iter = empty_space-ltext
+        space = "".join([" " for i in range(len_iter)])
+        out = space+text
+    else:
+        out = " "+text+" "
     return out
 
 
 def build_line_console(line, use_tab=False):
     str_build = ""
     for ln in line:
-        text = format_text_console(ln)
+        text = format_text(ln)
         str_build+=text
         if use_tab: str_build+="\t"
     return str_build
