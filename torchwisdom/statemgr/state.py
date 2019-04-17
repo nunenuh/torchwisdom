@@ -72,14 +72,22 @@ class Logger(object):
             return pd.read_csv(file)
 
     def _build_csv(self):
-        data = {'id': [], 'name': [], 'desc': [], 'datetime': []}
-        return pd.DataFrame(data, columns=['id', 'name', 'desc', 'datetime'])
+        data = {'id': [], 'name': [], 'desc': [], 'created': [], "modified": []}
+        return pd.DataFrame(data, columns=['id', 'name', 'desc', 'created', 'modified'])
 
+class State(dict):
+    def __init__(self, *args, **kwargs):
+        super(State, self).__init__(*args, **kwargs)
+
+    def set(self, key, val):
+        self.__setitem__(key, val)
+
+    
 
 class StateManager(object):
     def __init__(self):
         super(StateManager, self).__init__()
-        self._state: Dict = None
+        self._state: State = State()
         self._store = Store()
         self._logger = Logger()
         self.id: str = random_generator()
@@ -156,23 +164,29 @@ def random_generator():
     return hid
 
 
+
+
+
 if __name__ == '__main__':
-
-    # ds1 = DatasetState('trainset')
-    # ds2 = DatasetState('validset')
-    # print(ds1.data['name'], ds2.data['name'])
-    sm = StateManager()
-
-    # sm.add_state([ds1, ds2])
-    sm.set_id('4d95e6fcc0bf0b02badcd41370d53ff2e4e1d0e9')
+    s = State()
+    s.set("k", {})
+    print(s)
+    #
+    # # ds1 = DatasetState('trainset')
+    # # ds2 = DatasetState('validset')
+    # # print(ds1.data['name'], ds2.data['name'])
+    # sm = StateManager()
+    #
+    # # sm.add_state([ds1, ds2])
+    # sm.set_id('4d95e6fcc0bf0b02badcd41370d53ff2e4e1d0e9')
+    # # print(sm.states)
+    # # print(sm.state_dict())
+    # sm.save()
+    #
+    # sm.load()
     # print(sm.states)
     # print(sm.state_dict())
-    sm.save()
-
-    sm.load()
-    print(sm.states)
-    print(sm.state_dict())
-    print(sm.history.head())
-
-    # sm.dframe_add('4d95e6fcc0bf0b02badcd41370d53ff2e4e1d0e9', 'MyProject')
-
+    # print(sm.history.head())
+    #
+    # # sm.dframe_add('4d95e6fcc0bf0b02badcd41370d53ff2e4e1d0e9', 'MyProject')
+    #
