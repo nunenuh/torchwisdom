@@ -10,6 +10,8 @@ from fastprogress import master_bar, progress_bar
 import torch.nn as nn
 import torch
 import torch.optim as optim
+from pathlib import Path
+from PIL import Image
 
 __all__ = []
 
@@ -111,10 +113,39 @@ class ConvTrainer(Trainer):
         self.cb_handler.on_fit_end(epoch=epoch, master_bar=mbar)
 
 
-    def resume(self):
-        self.cb_handler.on_epoch_resume()
+    def resume(self, from_last=True, id=None, **kwargs):
+        self._build_state_manager()
+        if id is not None:
+            self.state_manager.load(id)
+        if from_last:
+            self.state_manager.load_last()
 
-        self.cb_handler.on_resume_end()
+
+        self.optimizer = self.state_manager.state.get('optimizer').get("object")
+        self.model = self.state_manager.state.get('model').get("object")
+        self.criterion = self.state_manager.state.get('criterion')
+        trainer_state: Dict = self.state_manager.state.get('trainer')
+        lr = trainer_state.get("lr")
+        epoch_curr= trainer_state.get("epoch").get("curr")
+        epoch_num = trainer_state.get("epoch").get("num")
+        self._build_optimizer(lr)
+        self._build_callback_handler_resume()# CallbackHandler need to be the last to build
+
+
+        mbar = master_bar(range(epoch_curr-1, epoch_num))
+
+        self.cb_handler.on_resume_begin(epoch_num=epoch_num, master_bar=mbar)
+
+        # self.cb_handler.on_fit_begin(epoch_num=epoch_num, master_bar=mbar)
+        for epoch in mbar:
+            self.cb_handler.on_epoch_begin(epoch=epoch, master_bar=mbar)
+            epoch = epoch + 1
+            self.train(epoch, mbar)
+            self.validate(epoch, mbar)
+            self.cb_handler.on_epoch_end(epoch=epoch, master_bar=mbar)
+        # self.cb_handler.on_fit_end(epoch=epoch, master_bar=mbar)
+
+        self.cb_handler.on_resume_end(epoch=epoch, master_bar=mbar)
 
 
     def freeze(self, last_from: int = -1, last_to: int = None):
@@ -137,4 +168,22 @@ class ConvTrainer(Trainer):
         params = self.model.parameters()
         for param in params:
             param.requires_grad = True
+
+    def predict(self, data: Union[AnyStr, torch.Tensor]):
+        if type(data) is str:
+            path = Path(data)
+            if path.exists() and path.is_file():
+                image = Image.open(data)
+                if image:
+                    # transform is here
+                    pass
+                else:
+                    # raise error
+                    pass
+                #check file is
+        elif type(data) is torch.Tensor:
+            #
+            pass
+        else:
+            pass
 
