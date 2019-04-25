@@ -5,6 +5,7 @@ import hashlib
 import pandas as pd
 import os
 from pathlib import Path
+import datetime
 
 
 __all__ = ['Store', 'Logger', 'StateManager']
@@ -17,19 +18,117 @@ logger_file = state_home.joinpath('main.csv')
 
 class Store(object):
     def __init__(self, data={}):
-        self.state = data
+        self.state = State()
 
-    def save(self, filename, state):
-        path = state_home.joinpath(filename)
-        torch.save(state, str(path))
+    def _is_exist(self, id, mode='curr'):
+        p = state_home.joinpath(id)
+        if p.is_dir():
+            curr_filename = id + f"_{mode}.pt"
+            if p.joinpath(curr_filename).is_file():
+                return True
+        return False
 
-    def load(self, filename,  map_location: Any = None) -> Any:
-        path = state_home.joinpath(filename)
-        if path.exists() and path.is_file():
+    def _is_dir(self, id):
+        p = state_home.joinpath(id)
+        if p.exists() and p.is_dir() :
+            return True
+        else:
+            return False
+
+    def _get_previous_saved_file(self, id):
+        curr_filename = id + f"_curr.pt"
+        curr = state_home.joinpath(id).joinpath(curr_filename)
+
+        last_filename = id + f"_last.pt"
+        last = state_home.joinpath(id).joinpath(last_filename)
+
+        ct = curr.stat().st_mtime
+        lt = last.stat().st_mtime
+        if ct > lt:
+            return last
+        if lt > ct:
+            return curr
+
+    def _get_last_saved_file(self, id):
+        curr_filename = id + f"_curr.pt"
+        curr = state_home.joinpath(id).joinpath(curr_filename)
+
+        last_filename = id + f"_last.pt"
+        last = state_home.joinpath(id).joinpath(last_filename)
+
+        ct = curr.stat().st_atime
+        lt = last.stat().st_atime
+        if ct > lt:
+            return curr
+        if lt > ct:
+            return last
+
+    def _test_load(self, id, mode,  map_location: Any = None):
+        filename = id + f"_{mode}.pt"
+        path = state_home.joinpath(id).joinpath(filename)
+        try:
+            loaded = torch.load(str(path), map_location=map_location)
+            loaded.keys()
+            return True
+        except:
+            return False
+
+
+    def save(self, id, state):
+        # check is if curr and last file is exist
+        # check which file is newer
+        # update the file with lowest status
+        if self._is_dir(id):
+            if self._is_exist(id, 'curr') and self._is_exist(id, 'last'):
+                path = self._get_previous_saved_file(id)
+                torch.save(state, str(path))
+                # print(f'File saved {str(path)}')
+            elif self._is_exist(id, 'curr') and not self._is_exist(id, 'last'):
+                curr_filename = id + f"_last.pt"
+                path = state_home.joinpath(id).joinpath(curr_filename)
+                torch.save(state, str(path))
+                # print(f'File saved {str(path)}')
+            else:
+                curr_filename = id + f"_curr.pt"
+                path: Path = state_home.joinpath(id).joinpath(curr_filename)
+                torch.save(state, str(path))
+                # print(f'File saved {str(path)}')
+
+        else:
+            #if dir does not exist than create dir
+            path: Path = state_home.joinpath(id)
+            os.makedirs(str(path), exist_ok=True)
+
+    def load(self, id,  map_location: Any = None) -> Any:
+        curr_test = self._test_load(id, 'curr')
+        last_test = self._test_load(id, 'last')
+        if curr_test and last_test:
+            path = self._get_last_saved_file(id)
             self.state = torch.load(str(path), map_location=map_location)
+            print(f"File {str(path)} is loaded!")
+            return self.state
+        elif curr_test and not last_test:
+            curr_filename = id + f"_curr.pt"
+            path: Path = state_home.joinpath(id).joinpath(curr_filename)
+            self.state = torch.load(str(path), map_location=map_location)
+            print(f"File {str(path)} is loaded!")
+            return self.state
+        elif not curr_test and last_test:
+            last_filename = id + f"_last.pt"
+            path: Path = state_home.joinpath(id).joinpath(last_filename)
+            self.state = torch.load(str(path), map_location=map_location)
+            print(f"File {str(path)} is loaded!")
             return self.state
         else:
-            raise FileNotFoundError(f"File {str(path)} is not found")
+            raise FileNotFoundError(f"File is not found")
+
+
+        # path = state_home.joinpath(id).joinpath(filename)
+        # if path.exists() and path.is_file():
+        #     self.state = torch.load(str(path), map_location=map_location)
+        #     return self.state
+        # else:
+        #     raise FileNotFoundError(f"File {str(path)} is not found")
 
 
 class Logger(object):
@@ -42,7 +141,7 @@ class Logger(object):
 
     def add(self, id, name='', desc=''):
         file = logger_file
-        row = {'id': id, 'name': name, 'desc': desc, 'datetime': str(datetime.datetime.now())}
+        row = {'id': id, 'name': name, 'desc': desc, 'created': str(datetime.datetime.now()), "modified": ""}
         self._dataframe = self._dataframe.append(row, ignore_index=True)
         self._dataframe.to_csv(str(file), index=None, header=True)
 
@@ -53,7 +152,15 @@ class Logger(object):
         return self._dataframe.iloc[-1]
 
     def find(self, id):
-        pass
+        df = self.dataframe()
+        search = df[df['id'] == id]
+        return search
+
+    def is_exist(self, id):
+        if len(self.find(id))>0:
+            return True
+        else:
+            return False
 
     def find_by(self, field='name', value=""):
         pass
@@ -82,7 +189,6 @@ class State(dict):
     def set(self, key, val):
         self.__setitem__(key, val)
 
-    
 
 class StateManager(object):
     def __init__(self):
@@ -109,21 +215,21 @@ class StateManager(object):
         return self._state
 
     def load(self, id):
-        filename = id + ".pt"
-        self._state = self.store().load(filename)
+        self._state = self.store().load(id)
         self.id = id
         return self._state
 
     def load_last(self):
         id = self.logger().last()['id']
-        filename = id+".pt"
-        self._state = self.store().load(filename)
+        self._state = self.store().load(id)
         self.id = id
 
     def save(self, name='', desc=''):
-        filename = self.id + ".pt"
-        self.store().save(filename, self._state)
-        self.logger().add(self.id, name=name, desc=desc)
+        self.store().save(self.id, self._state)
+        if not self.logger().is_exist(self.id):
+            self.logger().add(self.id, name=name, desc=desc)
+
+
 
     def _build_defaults_state(self):
         self._state = {
@@ -143,16 +249,19 @@ class StateManager(object):
                 "valid": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}},
                 "test": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}}
             },
-            "optimizer": {},
+            'criterion': None,
+            "optimizer": {'defaults': None, 'state_dict': None, 'classname': None, 'object': None},
             "scheduler": {},
             "trainer": {
                 "id": "",
                 "name": "",
                 "desc": "",
                 "epoch": {'start': 0, 'curr': 0, 'num': 0, 'time': [], 'time_start': 0, 'time_end': 0, 'remain': []},
+                "lr": 0.01,
                 "created": "",
                 "modified": ""
-            }
+            },
+            "callbacks": {}
         }
 
 
