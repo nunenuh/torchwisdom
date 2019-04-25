@@ -53,7 +53,7 @@ class OptimizerWrapper(object):
         self.model = model
         self.optimizer: optim.Optimizer = optimizer
 
-    def create(self, lr: Union[float, list], opt: Union[str, optim.Optimizer]=None, **kwargs):
+    def create(self, lr: Union[float, list], opt: Union[str, optim.Optimizer] = None, **kwargs):
         model_params = self._model_parameters(lr)
         opt_build = None
         if type(opt) == str:
@@ -65,7 +65,8 @@ class OptimizerWrapper(object):
             opt_build = optim_builder(opt, model_params, lr=lr, **kwargs)
         elif isinstance(opt, optim.Optimizer):
             # if optimizer is an instantiate object of Optimizer
-            opt.defaults['lr'] = lr
+            if hasattr(opt, 'defaults'):
+                opt.defaults['lr'] = lr
             opt_build = opt
         else:
             #default opt
