@@ -6,7 +6,7 @@ from torchwisdom.statemgr.state import StateManager
 from datetime import timedelta
 from torchwisdom.core import *
 
-
+__all__ = []
 
 class ProgressTable(object):
     def __init__(self):
@@ -43,6 +43,12 @@ def time_delta_remain(epoch_state):
     remain = time_formatter(remain_last)
     return delta, remain
 
+def time_delta_remain_resume(epoch_state, epoch):
+    delta_last = epoch_state.get('time')[epoch]
+    delta = time_formatter(delta_last)
+    remain_last = epoch_state.get('remain')[epoch]
+    remain = time_formatter(remain_last)
+    return delta, remain
 
 def line_builder(metric_state: Dict, epoch, tdelta, tremain):
     train: Dict = metric_state.get('train')
@@ -52,6 +58,22 @@ def line_builder(metric_state: Dict, epoch, tdelta, tremain):
     for key in train.keys():
         line.append(f"{train[key]['mean'][-1]:.6f}")
         line.append(f"{valid[key]['mean'][-1]:.6f}")
+    line.append(f'{tdelta}')
+    line.append(f'{tremain}')
+
+    if isnotebook():
+        return line
+    else:
+        return build_line_console(line)
+
+def line_builder_resume(metric_state: Dict, epoch, tdelta, tremain):
+    train: Dict = metric_state.get('train')
+    valid: Dict = metric_state.get('valid')
+
+    line = [f'{epoch+1}']
+    for key in train.keys():
+        line.append(f"{train[key]['epoch'][epoch]:.6f}")
+        line.append(f"{valid[key]['epoch'][epoch]:.6f}")
     line.append(f'{tdelta}')
     line.append(f'{tremain}')
 
@@ -84,12 +106,37 @@ def graph_builder(metric_state: Dict, trainer_state: Dict):
 
     train_loss = train.get('loss').get('epoch')
     valid_loss = valid.get('loss').get('epoch')
+
     if epoch_curr == 1:
         x = [1]
     else:
-        x = list(range(1, epoch_curr+1))
+        x = list(range(1, len(train_loss)+1))
     graph = [[x, train_loss], [x, valid_loss]]
+    # print(graph)
     return graph
+
+
+def clean_up_metric_resume(metric_state: Dict, epoch_curr):
+    train: Dict = metric_state.get('train')
+    valid: Dict = metric_state.get("valid")
+
+    for key in train.keys():
+        # print("train epoch len", len(train[key]['epoch']))
+        # print(key, train[key]['epoch'])
+        if len(train[key]['epoch']) != epoch_curr-1:
+            train[key]['epoch'].pop()
+
+        # print("valid epoch len", len(valid[key]['epoch']))
+        # print(key, valid[key]['epoch'])
+        if len(valid[key]['epoch']) != epoch_curr-1:
+            valid[key]['epoch'].pop()
+
+
+
+
+
+
+
 
 
 class ProgressBarCallback(Callback):
@@ -99,6 +146,38 @@ class ProgressBarCallback(Callback):
 
     def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
         self.mbar: master_bar = kwargs.get('master_bar')
+
+    def on_resume_begin(self, *args: Any, **kwargs: Any) -> None:
+        self.mbar: master_bar = kwargs.get('master_bar')
+
+        mbar: master_bar = kwargs.get('master_bar')
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        epoch_curr = trainer_state.get('epoch')['curr']
+        trainer_state.get('epoch')['curr'] = epoch_curr - 1
+
+        metric_state: Dict = self.statemgr.state.get('metric')
+        # clean up metric
+        clean_up_metric_resume(metric_state, epoch_curr)
+
+
+        # header write
+        line = line_head_builder(metric_state)
+        if isnotebook():
+            mbar.write(line, table=True)
+        else:
+            mbar.write(line, table=False)
+
+        for epoch in range(epoch_curr-1):
+            metric_state: Dict = self.statemgr.state.get('metric')
+            epoch_state: Dict = trainer_state.get('epoch')
+            tdelta = time_formatter(epoch_state.get("time")[epoch])
+            tremain = time_formatter(epoch_state.get("remain")[epoch])
+            line = line_builder_resume(metric_state, epoch, tdelta, tremain)
+            if isnotebook():
+                mbar.write(line, table=True)
+            else:
+                mbar.write(line, table=False)
+
 
     def on_epoch_end(self, *args: Any, **kwargs: Any) -> None:
         mbar: master_bar = kwargs.get('master_bar')
