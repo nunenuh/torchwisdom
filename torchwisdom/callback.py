@@ -1,5 +1,6 @@
 from typing import *
 from dataclasses import dataclass
+from collections import OrderedDict
 
 
 __all__ = ['Hook', 'Callback', 'CallbackHandler']
@@ -69,7 +70,14 @@ class CallbackHandler(object):
     def __init__(self, trainer, callbacks: List[Callback] = None):
         self.trainer = trainer
         self.callbacks = callbacks or []
+        self.callbacks_odict = OrderedDict()
         # self._build_callbacks()
+
+    def _add_odict(self, callback):
+        name = callback.__class__.__name__
+        obj = callback
+        dc = {name: obj}
+        self.callbacks_odict.update(dc)
 
     def add(self, callbacks: Union[List[Callback], Callback]):
         if type(callbacks) == list:
@@ -79,12 +87,14 @@ class CallbackHandler(object):
                 callback.set_statemgr(self.trainer.state_manager)
                 callback.set_optimizer(self.trainer.optimizer)
                 self.callbacks.append(callback)
+                self._add_odict(callback)
         else:
             callbacks.set_trainer(self.trainer)
             callbacks.set_statemgr(self.trainer.state_manager)
             callbacks.set_optimizer(self.trainer.optimizer)
             callbacks.set_handler(self)
             self.callbacks.append(callbacks)
+            self._add_odict(callbacks)
 
     def reconnect_callback(self):
         """
