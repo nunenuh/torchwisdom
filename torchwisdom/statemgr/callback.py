@@ -3,6 +3,8 @@ from torchwisdom.statemgr.state import *
 from torchwisdom.callback import Callback
 import time
 from torchwisdom.core import *
+# from torchwisdom.trainer import Trainer
+# from torchwisdom.callback import CallbackHandler
 
 
 class StateManagerCallback(Callback):
@@ -24,6 +26,26 @@ class StateManagerCallback(Callback):
         dcoll_state['shuffle'] = self.trainer.data.shuffle
         dcoll_state.get('dataset').get('trainset')['len'] = self.trainer.data.trainset.__len__()
         dcoll_state.get('dataset').get('validset')['len'] = self.trainer.data.validset.__len__()
+
+        self.statemgr.state["criterion"] = self.trainer.criterion
+        self.statemgr.state["callbacks"] = self.trainer.cb_handler.callbacks_odict
+
+    def on_resume_begin(self, *args: Any, **kwargs: Any) -> None:
+        epoch_num = kwargs.get('epoch_num')
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        epoch_state: Dict = trainer_state.get('epoch')
+        epoch_state['num'] = epoch_num
+
+        dcoll_state: Dict = self.statemgr.state.get('data')
+        dcoll_state['batch_size'] = self.trainer.data.batch_size
+        dcoll_state['num_workers'] = self.trainer.data.num_workers
+        dcoll_state['shuffle'] = self.trainer.data.shuffle
+        dcoll_state.get('dataset').get('trainset')['len'] = self.trainer.data.trainset.__len__()
+        dcoll_state.get('dataset').get('validset')['len'] = self.trainer.data.validset.__len__()
+
+        self.statemgr.state["criterion"] = self.trainer.criterion
+        self.statemgr.state["callbacks"] = self.trainer.cb_handler.callbacks_odict
+
 
     def on_fit_end(self, *args: Any, **kwargs: Any) -> None:
         pass
@@ -49,33 +71,14 @@ class StateManagerCallback(Callback):
         if tremain <= 0: tremain = 0
         epoch_state['remain'].append(tremain)
         epoch_state['curr'] += 1
-        self.statemgr.save()
+        if self.trainer.log_state:
+            self.statemgr.save()
 
 
-class ModelCheckPointCallback(Callback):
-    def __init__(self, filepath, monitor='val_loss', mode='auto', **kwargs):
-        super(ModelCheckPointCallback, self).__init__()
-        self.filepath = filepath
-        self.monitor = monitor
-        self.mode = mode
-        self.verbose = kwargs.get('verbose', False)
-        self.save_best_only = kwargs.get("save_best_only", False)
-        self.save_weight_only = kwargs.get("save_best_only", False)
-        self.period = kwargs.get("period", 1)
 
-        self.statemgr: StateManager = None
-
-    def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    def on_fit_end(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-    def on_epoch_end(self, *args: Any, **kwargs: Any) -> None:
-        pass
-
-
-class CSVLoggerCallback(Callback):
-    def __init__(self, filepath, separator=',', replace=False):
-        super(CSVLoggerCallback, self).__init__()
+def build_callback_state(trainer: object, statemgr: StateManager):
+    callbacks_state = statemgr.state.get("callbacks")
+    callback_list: List[Callback] = trainer.cb_handler.callbacks
+    for cb in callback_list:
+        callbacks_state[cb.__class__.__name__] = cb
 
