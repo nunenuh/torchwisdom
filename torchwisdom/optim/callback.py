@@ -6,9 +6,23 @@ from torchwisdom.statemgr.state import StateManager
 import torch
 
 
-__all__  = ['StepLRCallback', 'MultiStepLRCallback', 'LambdaLRCallback', 'ExponentialLRCallback',
-            'CosineAnnealingLRCallback', 'ReduceLROnPlateauCallback']
+__all__  = ['OptimizerCallback', 'StepLRCallback', 'MultiStepLRCallback', 'LambdaLRCallback',
+            'ExponentialLRCallback', 'CosineAnnealingLRCallback', 'ReduceLROnPlateauCallback']
 
+
+class OptimizerCallback(Callback):
+    def __init__(self):
+        super(OptimizerCallback, self).__init__()
+        self.optimizer: optim.Optimizer = None
+        self.statemgr: StateManager = None
+
+    def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
+        optim_state: Dict = self.statemgr.state.get('optimizer')
+        if hasattr(self.optimizer, 'defaults'):
+            optim_state['defaults'] = self.optimizer.defaults
+        optim_state['state_dict'] = self.optimizer.state_dict()
+        optim_state['classname'] = self.optimizer.__class__.__name__
+        optim_state['object'] = self.optimizer
 
 class _LRSchedulerCallback(Callback):
     def __init__(self):
@@ -70,7 +84,7 @@ class LambdaLRCallback(_LRSchedulerCallback):
 
 
 class ExponentialLRCallback(_LRSchedulerCallback):
-    def __init__(self,  gamma:float, last_epoch:int = -1, *args:Any, **kwargs:Any) -> None:
+    def __init__(self,  gamma: float, last_epoch:int = -1, *args:Any, **kwargs:Any) -> None:
         super(ExponentialLRCallback, self).__init__(*args, **kwargs)
         self.gamma = gamma
         self.last_epoch = last_epoch
