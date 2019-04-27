@@ -12,6 +12,8 @@ import torch
 import torch.optim as optim
 from pathlib import Path
 from PIL import Image
+import torchvision.transforms as transforms
+from torchwisdom.vision.datasets.helpers import idx_to_class
 
 __all__ = []
 
@@ -169,21 +171,71 @@ class ConvTrainer(Trainer):
         for param in params:
             param.requires_grad = True
 
-    def predict(self, data: Union[AnyStr, torch.Tensor]):
+    def predict(self, data: Union[AnyStr, torch.Tensor], topk=False, show_graph=False, transform=None, use_dataset_transform=False):
+        if use_dataset_transform:
+            tmft_image = self._get_transformed_image(data)
+        else:
+            if len(data.size()) ==3:
+                tmft_image = data.unsqueeze(dim=0)
+            else:
+                tmft_image = data
+        tmft_image = tmft_image.to(self.device)
+
+        self.model.to(self.device)
+        self.model.eval()
+        output = self.model(tmft_image)
+        return output
+
+    def predict_single(self, data, readable=False, topk=None, show_graph=False):
+        pred = self.predict(data)
+        if len(pred.size())==4:
+            pred = pred.squeeze()
+
+        if readable:
+            argmx = torch.argmax(pred, dim=1).item()
+            itc = idx_to_class(self.data.validset.class_to_idx)
+            return itc[argmx]
+        else:
+            return pred
+
+
+
+    def _get_transformed_image(self, data: Union[AnyStr, torch.Tensor]):
         if type(data) is str:
             path = Path(data)
             if path.exists() and path.is_file():
                 image = Image.open(data)
                 if image:
-                    # transform is here
-                    pass
+                    tmft = self._get_transform()
+                    img_tmft = tmft(image)
+                    if len(img_tmft.size())==3:
+                        img_tmft = img_tmft.unsqueeze(dim=0)
+                    return img_tmft
                 else:
-                    # raise error
-                    pass
-                #check file is
+                    raise ValueError("Image is not exist!")
+            else:
+                raise ValueError("File not found!")
         elif type(data) is torch.Tensor:
-            #
-            pass
+            tmft = self._get_transform()
+            img_tmft = tmft(data)
+            if len(img_tmft.size()) == 3:
+                img_tmft = img_tmft.unsqueeze(dim=0)
+            return img_tmft
         else:
-            pass
+            raise ValueError("data must type string or Tensor!")
+
+
+    def _get_transform(self, from_pil=True):
+        if hasattr(self.data.validset, 'transform'):
+            tmft = self.data.validset.transform
+        elif hasattr(self.data.trainset, 'transform'):
+            tmft = self.data.trainset.transform
+        else:
+            if from_pil:
+                tmft = transforms.Compose([transforms.ToTensor()])
+            else:
+                tmft = transforms.Compose([transforms.ToPILImage(),
+                                           transforms.ToTensor()])
+
+        return tmft
 

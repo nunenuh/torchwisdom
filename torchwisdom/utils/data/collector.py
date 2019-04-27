@@ -2,7 +2,7 @@ from torch.utils.data.dataset import Dataset
 from torch.utils.data import DataLoader
 
 class DatasetCollector(object):
-    def __init__(self, trainset:Dataset, validset:Dataset, testset:Dataset=None,
+    def __init__(self, trainset: Dataset, validset: Dataset, testset: Dataset=None,
                  batch_size=64, shuffle=True, num_workers=2):
         self.batch_size = batch_size
         self.shuffle = shuffle
@@ -18,6 +18,10 @@ class DatasetCollector(object):
         if self.testset:
             self.testloader = DataLoader(self.testset, batch_size=self.batch_size,
                                     shuffle=self.shuffle, num_workers=self.num_workers)
+
+
+    def set_predict_transform(self, tmft):
+        self.predict_transform = tmft
 
 
 

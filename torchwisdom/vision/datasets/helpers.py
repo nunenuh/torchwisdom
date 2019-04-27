@@ -4,6 +4,7 @@ from PIL import Image
 import torchvision.transforms.functional as F
 import logging
 from tqdm import tqdm
+from typing import *
 
 class ImagesMeanStdFinder(object):
     """  Class for find mean and std from image folder dataset """
@@ -87,6 +88,13 @@ class ImagesMeanStdFinder(object):
         """
         return self._std
 
+
+
+def idx_to_class(class_to_idx: Dict):
+    out = {}
+    for k, v in class_to_idx.items():
+        out.update({v:k})
+    return out
 
 
 if __name__ == '__main__':

@@ -6,7 +6,7 @@ import torch.utils.data as data
 import PIL
 import PIL.Image
 from torchwisdom.vision.transforms import transforms as ptransforms
-
+from torchvision.datasets import ImageFolder
 
 class SiamesePairDataset(data.Dataset):
     def __init__(self, root, ext='jpg', transform=None, pair_transform=None, target_transform=None):
@@ -156,6 +156,8 @@ class SiamesePairDataset(data.Dataset):
                 files_list.append(dpair[i])
 
         return files_list
+
+
 
 
 
