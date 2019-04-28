@@ -37,6 +37,7 @@ class PairToTensor(transforms.ToTensor):
         img2 = F.to_tensor(img2)
         return img1, img2
 
+
 class PairResize(transforms.Resize):
     def __init__(self, size, interpolation=Image.BILINEAR):
        super(PairResize, self).__init__(size=size, interpolation=interpolation)
