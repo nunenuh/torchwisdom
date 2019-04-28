@@ -27,21 +27,17 @@ def is_numpy_pil_compatible(np_array: np.ndarray) -> bool:
 
 
 def is_tensor_image_compatible(tensor_data: torch.Tensor) -> bool:
-    len_tensor = len(tensor_data.size())
-    size_tensor = tensor_data.size()
-    if len_tensor == 4:
+    if tensor_data.dim() == 4:
         return is_tensor_batch_image(tensor_data)
-    elif len_tensor == 3:
+    elif tensor_data.dim() == 3:
         return is_tensor_single_image(tensor_data)
     else:
         return False
 
 
 def is_tensor_batch_image(tensor_data: torch.Tensor) -> bool:
-    len_tensor = len(tensor_data.size())
-    size_tensor = tensor_data.size()
-    if len_tensor == 4:
-        if 1 <= size_tensor[1] <= 3:
+    if tensor_data.dim() == 4:
+        if 1 <= tensor_data.size()[1] <= 3:
             return True
         else:
             return False
@@ -50,10 +46,8 @@ def is_tensor_batch_image(tensor_data: torch.Tensor) -> bool:
 
 
 def is_tensor_single_image(tensor_data: torch.Tensor) -> bool:
-    len_tensor = len(tensor_data.size())
-    size_tensor = tensor_data.size()
-    if len_tensor == 3:
-        if 1 <= size_tensor[1] <= 3:
+    if tensor_data.dim() == 3:
+        if 1 <= tensor_data.size()[0] <= 3:
             return True
         else:
             return False
