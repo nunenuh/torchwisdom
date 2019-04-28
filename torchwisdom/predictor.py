@@ -9,7 +9,7 @@ __all__ = ['ConvPredictor', ]
 
 
 class _Predictor(object):
-    def __init__(self):
+    def __init__(self, model: nn.Module, transform = None, ):
         self.device = 'cpu'
         self.transform: transforms.Compose = None
         self.model: nn.Module = None
@@ -19,6 +19,15 @@ class _Predictor(object):
         return NotImplementedError()
 
     def single(self, data):
+        return NotImplementedError()
+
+    def _pre_predict(self, data) -> torch.Tensor:
+        return NotImplementedError()
+
+    def _predict(self, data) -> torch.Tensor:
+        return NotImplementedError()
+
+    def _post_predict(self, data) -> torch.Tensor:
         return NotImplementedError()
 
 
@@ -80,3 +89,4 @@ class AudioUnsupervisedPredictor(_Predictor):
 class ConvPredictor(_VisionSupervisePredictor):
     def __init__(self):
         super(ConvPredictor, self).__init__()
+
