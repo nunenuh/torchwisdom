@@ -7,7 +7,7 @@ import PIL
 import PIL.JpegImagePlugin
 
 
-__all__ = ['is_file_pil_compatible', 'is_numpy_pil_compatible',
+__all__ = ['is_file_pil_compatible', 'is_numpy_pil_compatible', 'identify_input',
            'is_tensor_single_image', 'is_tensor_batch_image', 'is_pil_verified', 'is_tensor_image_compatible']
 
 
