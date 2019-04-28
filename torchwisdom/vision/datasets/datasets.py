@@ -5,7 +5,7 @@ import pathlib
 import torch.utils.data as data
 import PIL
 import PIL.Image
-from torchwisdom.vision.transforms import transforms as ptransforms
+from torchwisdom.vision.transforms import pair as ptransforms
 
 
 class SiamesePairDataset(data.Dataset):
