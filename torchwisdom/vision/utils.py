@@ -68,7 +68,7 @@ def is_pil_verified(data: Image.Image) -> bool:
         return False
 
 
-def identify_data(data: Union[str, np.ndarray, torch.Tensor, Image]):
+def identify_input(data: Union[str, np.ndarray, torch.Tensor, Image]):
     if type(data) == str:
         return 'string'
     elif type(data) == np.ndarray:
