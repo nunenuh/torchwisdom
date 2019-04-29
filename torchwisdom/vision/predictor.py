@@ -5,6 +5,11 @@ import numpy as np
 import PIL
 from PIL import Image
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+__all__ = ['ConvPredictor']
 
 
 class ConvPredictor(VisionSupervisePredictor):
@@ -49,9 +54,8 @@ class ConvPredictor(VisionSupervisePredictor):
                     feature = data.unsqueeze(dim=0)
         return feature
 
-    def _predict(self, data: Union[str, np.ndarray, Image, torch.Tensor]):
+    def _predict(self, feature: Union[str, np.ndarray, Image, torch.Tensor]):
         prediction = None
-        feature: torch.Tensor = self._pre_predict(data)
         if feature:
             feature.to(self.device)
             self.model = self.model.to(self.device)
@@ -62,13 +66,33 @@ class ConvPredictor(VisionSupervisePredictor):
     def _post_predict(self, prediction: torch.Tensor):
         is_label = is_tensor_label(prediction)
         if is_label:
-            ...
-
-    def _topk(self, kval):
-        ...
+            if is_tensor_label_batch(prediction):
+                torch.argmax(prediction, dim=1)
+            elif is_tensor_label_single(prediction):
+                ...
+            else:
+                ...
 
     def _post_check(self, data):
         ...
 
+    def _topk(self, data, k_val=5):
+        feature = self._pre_predict(data)
+        prediction = self._predict(feature)
+        if is_tensor_label(prediction):
+            output = F.log_softmax(prediction, dim=1)
+            ps = torch.exp(output)
+            probability, classes = ps.topk(k_val, dim=1, largest=True, sorted=True)
+            return probability, classes
+        return False
 
+    def predict(self, data):
+        feature = self._pre_predict(data)
+        prediction = self._predict(feature)
+        information = self._post_predict(prediction)
+        return information
+
+
+if __name__ == "__main__":
+    ...
 
