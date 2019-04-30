@@ -1,12 +1,13 @@
 import random
 import PIL
-import torch
 from PIL import Image
-import torchvision.transforms.functional as F
-from torchvision import transforms
 import numpy as np
+import torch
+from torchvision import transforms
+import torchvision.transforms.functional as F
 
-__all__ = []
+
+__all__ = ['NumpyToTensor', 'NumpyToPIL']
 
 
 class NumpyToTensor(object):
@@ -24,6 +25,17 @@ class NumpyToPIL(object):
     def __call__(self, np_array):
         return Image.fromarray(np_array)
 
+
+class TensorToNumpy(object):
+    def __init__(self):
+        super(TensorToNumpy, self).__init__()
+
+    def __call__(self, tensor):
+        # check if tensor is cpu
+        # check if tensor is gpu
+        # check if tensor is grad
+        # use all that if to extract tensor from it
+        return NotImplementedError()
 
 
 
