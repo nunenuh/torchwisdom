@@ -7,7 +7,7 @@ from torchwisdom.core import *
 
 __all__ = ['AverageMetricsCallback', 'LossCallback', 'AccuracyCallback', 'AccuracyTopKCallback',
            'AccuracyThresholdCallback', 'ErrorRateCallback', 'MAECallback', 'MSECallback', 'RMSECallback',
-           'MSLECallback', 'DiceCoefCallback']
+           'MSLECallback', 'DiceCoefCallback', 'BCEAccuracyCallback', 'BCELogitsAccuracyCallback']
 
 
 class AverageMetricsCallback(Callback):
@@ -240,6 +240,41 @@ class DiceCoefCallback(AverageMetricsCallback):
         self.metric_valid.update(M.dice_coeff(y_pred, y_true).item())
         self.valid_update()
 
+
+class BCEAccuracyCallback(AverageMetricsCallback):
+    def __init__(self):
+        super(BCEAccuracyCallback, self).__init__()
+        self.name = 'bce_acc'
+
+    def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_train.update(M.bce_accuracy(y_pred, y_true).item())
+        self.train_update()
+
+    def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_valid.update(M.bce_accuracy(y_pred, y_true).item())
+        self.valid_update()
+
+
+class BCELogitsAccuracyCallback(AverageMetricsCallback):
+    def __init__(self):
+        super(BCELogitsAccuracyCallback, self).__init__()
+        self.name = 'bce_logits_acc'
+
+    def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_train.update(M.bce_loss_with_logits_accuracy(y_pred, y_true).item())
+        self.train_update()
+
+    def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred: Tensor = kwargs.get('y_pred')
+        y_true: Tensor = kwargs.get('y_true')
+        self.metric_valid.update(M.bce_loss_with_logits_accuracy(y_pred, y_true).item())
+        self.valid_update()
 
 if __name__ == '__main__':
     LossCallback()
