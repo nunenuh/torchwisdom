@@ -13,7 +13,7 @@ import torch.optim as optim
 from pathlib import Path
 from PIL import Image
 import torchvision.transforms as transforms
-from torchwisdom.vision.datasets.helpers import idx_to_class
+from torchwisdom.vision.predictor import ConvPredictor
 
 __all__ = []
 
@@ -26,9 +26,9 @@ else: from tqdm import tqdm, tnrange
 
 
 class ConvTrainer(Trainer):
-    def __init__(self, data: DatasetCollector, model: nn.Module, criterion: nn.Module,
-                 metrics: Collection[Callback]=None, callbacks: Collection[Callback]=None,
-                 optimizer: Optimizer = None, device='cpu'):
+    def __init__(self, data: DatasetCollector, model: nn.Module,
+                 criterion: nn.Module = None, optimizer: Optimizer = None,
+                 metrics: Collection[Callback] = None, callbacks: Collection[Callback] = None):
         '''
         :param data:
         :param model:
@@ -38,12 +38,19 @@ class ConvTrainer(Trainer):
         :param device:
 
         '''
-        super(ConvTrainer, self).__init__(data=data, model=model, criterion=criterion, metrics=metrics,
-                                          optimizer=optimizer, callbacks=callbacks, device=device)
+        super(ConvTrainer, self).__init__(data=data, model=model,
+                                          criterion=criterion, optimizer=optimizer,
+                                          metrics=metrics, callbacks=callbacks)
 
         self.data = data
         self.bunch = self.data.bunch()
+        self.predictor: ConvPredictor = None
+
         self._set_device()
+        self._build_predictor()
+
+    def _build_predictor(self):
+        self.predictor: ConvPredictor = ConvPredictor(self.model, self.data)
 
 
 
@@ -54,6 +61,21 @@ class ConvTrainer(Trainer):
     def build_optimizer(self, lr=0.001, mmt=0.9, wd=0.1):
         if self.optimizer is 'sgd':
             self.optim = optim.SGD(self.model.parameters(), lr=lr, momentum=mmt, weight_decay=wd)
+
+    # def _loss_fn(self, pred, target):
+    #     name = self.criterion.__class__.__name__
+    #     if name=='BCELoss' or name=='BCEWithLogitsLoss':
+    #         pred = pred.float()
+    #         target = target.unsqueeze(dim=1).float()
+    #         return self.criterion(pred, target)
+    #     return self.criterion(pred, target)
+
+    def _data_loss_check_clean(self, pred, target):
+        name = self.criterion.__class__.__name__
+        if name == 'BCELoss' or name == 'BCEWithLogitsLoss':
+            pred = pred.float()
+            target = target.unsqueeze(dim=1).float()
+        return pred, target
 
     def train(self, epoch, mbar: master_bar):
         self.cb_handler.on_train_begin( master_bar=mbar)
@@ -66,8 +88,10 @@ class ConvTrainer(Trainer):
             feature = feature.to(device=self.device)
             target = target.to(device=self.device)
 
+
             self.cb_handler.on_train_forward_begin(feature=feature, target=target)
             out = self.model(feature)
+            out, target = self._data_loss_check_clean(out, target)
             loss = self.criterion(out, target)
             self.cb_handler.on_train_forward_end(loss=loss, y_pred=out, y_true=target, )
 
@@ -79,6 +103,8 @@ class ConvTrainer(Trainer):
 
             self.cb_handler.on_train_batch_end(master_bar=mbar)
         self.cb_handler.on_train_end()
+
+
 
     def validate(self, epoch, mbar: master_bar):
         self.cb_handler.on_validate_begin(master_bar=mbar)
@@ -93,6 +119,7 @@ class ConvTrainer(Trainer):
 
                 self.cb_handler.on_validate_forward_begin(feature=feature, target=target, )
                 out = self.model(feature)
+                out, target = self._data_loss_check_clean(out, target)
                 loss = self.criterion(out, target)
                 self.cb_handler.on_validate_forward_end(loss=loss, y_pred=out, y_true=target, )
 
@@ -171,71 +198,74 @@ class ConvTrainer(Trainer):
         for param in params:
             param.requires_grad = True
 
-    def predict(self, data: Union[AnyStr, torch.Tensor], topk=False, show_graph=False, transform=None, use_dataset_transform=False):
-        if use_dataset_transform:
-            tmft_image = self._get_transformed_image(data)
-        else:
-            if len(data.size()) ==3:
-                tmft_image = data.unsqueeze(dim=0)
-            else:
-                tmft_image = data
-        tmft_image = tmft_image.to(self.device)
-
-        self.model.to(self.device)
-        self.model.eval()
-        output = self.model(tmft_image)
-        return output
-
-    def predict_single(self, data, readable=False, topk=None, show_graph=False):
-        pred = self.predict(data)
-        if len(pred.size())==4:
-            pred = pred.squeeze()
-
-        if readable:
-            argmx = torch.argmax(pred, dim=1).item()
-            itc = idx_to_class(self.data.validset.class_to_idx)
-            return itc[argmx]
-        else:
-            return pred
-
-
-
-    def _get_transformed_image(self, data: Union[AnyStr, torch.Tensor]):
-        if type(data) is str:
-            path = Path(data)
-            if path.exists() and path.is_file():
-                image = Image.open(data)
-                if image:
-                    tmft = self._get_transform()
-                    img_tmft = tmft(image)
-                    if len(img_tmft.size())==3:
-                        img_tmft = img_tmft.unsqueeze(dim=0)
-                    return img_tmft
-                else:
-                    raise ValueError("Image is not exist!")
-            else:
-                raise ValueError("File not found!")
-        elif type(data) is torch.Tensor:
-            tmft = self._get_transform()
-            img_tmft = tmft(data)
-            if len(img_tmft.size()) == 3:
-                img_tmft = img_tmft.unsqueeze(dim=0)
-            return img_tmft
-        else:
-            raise ValueError("data must type string or Tensor!")
+    def predict(self, data: Union[AnyStr, torch.Tensor], use_topk=False, kval=5, transform=None):
+        self.predictor.transform = transform
+        result = self.predictor.predict(data, use_topk=use_topk, kval=kval)
+        return  result
+    #     if use_dataset_transform:
+    #         tmft_image = self._get_transformed_image(data)
+    #     else:
+    #         if len(data.size()) ==3:
+    #             tmft_image = data.unsqueeze(dim=0)
+    #         else:
+    #             tmft_image = data
+    #     tmft_image = tmft_image.to(self.device)
+    #
+    #     self.model.to(self.device)
+    #     self.model.eval()
+    #     output = self.model(tmft_image)
+    #     return output
+    #
+    # def predict_single(self, data, readable=False, topk=None, show_graph=False):
+    #     pred = self.predict(data)
+    #     if len(pred.size())==4:
+    #         pred = pred.squeeze()
+    #
+    #     if readable:
+    #         argmx = torch.argmax(pred, dim=1).item()
+    #         itc = idx_to_class(self.data.validset.class_to_idx)
+    #         return itc[argmx]
+    #     else:
+    #         return pred
 
 
-    def _get_transform(self, from_pil=True):
-        if hasattr(self.data.validset, 'transform'):
-            tmft = self.data.validset.transform
-        elif hasattr(self.data.trainset, 'transform'):
-            tmft = self.data.trainset.transform
-        else:
-            if from_pil:
-                tmft = transforms.Compose([transforms.ToTensor()])
-            else:
-                tmft = transforms.Compose([transforms.ToPILImage(),
-                                           transforms.ToTensor()])
 
-        return tmft
+    # def _get_transformed_image(self, data: Union[AnyStr, torch.Tensor]):
+    #     if type(data) is str:
+    #         path = Path(data)
+    #         if path.exists() and path.is_file():
+    #             image = Image.open(data)
+    #             if image:
+    #                 tmft = self._get_transform()
+    #                 img_tmft = tmft(image)
+    #                 if len(img_tmft.size())==3:
+    #                     img_tmft = img_tmft.unsqueeze(dim=0)
+    #                 return img_tmft
+    #             else:
+    #                 raise ValueError("Image is not exist!")
+    #         else:
+    #             raise ValueError("File not found!")
+    #     elif type(data) is torch.Tensor:
+    #         tmft = self._get_transform()
+    #         img_tmft = tmft(data)
+    #         if len(img_tmft.size()) == 3:
+    #             img_tmft = img_tmft.unsqueeze(dim=0)
+    #         return img_tmft
+    #     else:
+    #         raise ValueError("data must type string or Tensor!")
+    #
+    #
+    # def _get_transform(self, from_pil=True):
+    #     if hasattr(self.data.validset, 'transform'):
+    #         tmft = self.data.validset.transform
+    #     elif hasattr(self.data.trainset, 'transform'):
+    #         tmft = self.data.trainset.transform
+    #     else:
+    #         if from_pil:
+    #             tmft = transforms.Compose([transforms.ToTensor()])
+    #         else:
+    #             tmft = transforms.Compose([transforms.ToPILImage(),
+    #                                        transforms.ToTensor()])
+    #
+    #     return tmft
 
