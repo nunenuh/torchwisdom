@@ -33,7 +33,7 @@ def accuracy(y_pred: Tensor, y_true: Tensor):
     bsize = y_pred.size(0)
     y_pred = y_pred.argmax(dim=-1).view(bsize, -1)
     y_true = y_true.view(bsize, -1)
-    acc = y_pred == y_true
+    acc = y_pred.long() == y_true.long()
     return acc.float().mean()
 
 
@@ -48,6 +48,25 @@ def accuracy_threshold(y_pred: Tensor, y_true: Tensor, thresh: float = 0.5, sigm
 def error_rate(y_pred: Tensor, y_true: Tensor) -> Tensor:
     return 1 - accuracy(y_pred, y_true)
 
+
+def bce_loss(y_pred: Tensor, y_true: Tensor) -> Tensor:
+    y_pred, y_true = core.flatten_check(y_pred, y_true)
+    y_pred, y_true = y_pred.float(), y_true.float()
+    return F.binary_cross_entropy(y_pred, y_true)
+
+
+def bce_accuracy(y_pred: Tensor, y_true: Tensor) -> Tensor:
+    return 1 - bce_loss(y_pred, y_true)
+
+
+def bce_loss_with_logits(y_pred: Tensor, y_true: Tensor) -> Tensor:
+    y_pred, y_true = core.flatten_check(y_pred, y_true)
+    y_pred, y_true = y_pred.float(), y_true.float()
+    return F.binary_cross_entropy_with_logits(y_pred, y_true)
+
+
+def bce_loss_with_logits_accuracy(y_pred: Tensor, y_true: Tensor) -> Tensor:
+    return 1 - bce_loss_with_logits(y_pred, y_true)
 
 # inspiration from
 # https://github.com/pytorch/pytorch/issues/1249
@@ -71,6 +90,7 @@ def mean_squared_error(y_pred: Tensor, y_true: Tensor,
     if not core.is_flatten_same_dim(y_pred, y_true):
         y_pred = core.flatten_argmax(y_pred)
     y_pred, y_true = core.flatten_check(y_pred, y_true)
+    y_pred, y_true = y_pred.float(), y_true.float()
     return F.mse_loss(y_pred, y_true, size_average, reduce, reduction)
 
 
