@@ -3,58 +3,55 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as transforms
 from typing import *
+from .utils import DatasetCollector
 
-
-__all__ = ['ConvPredictor', ]
+__all__ = []
 
 
 class _Predictor(object):
-    def __init__(self):
+    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
         self.device = 'cpu'
-        self.transform: transforms.Compose = None
-        self.model: nn.Module = None
-        self.data: Union[str, torch.Tensor] = None
+        self.transform: transforms.Compose = transform
+        self.model: nn.Module = model
+        self.data: DatasetCollector = data
 
-    def batch(self, data):
+    def _pre_check(self, data):
         return NotImplementedError()
 
-    def single(self, data):
+    def _pre_predict(self, data):
+        return NotImplementedError()
+
+    def _predict(self, data):
+        return NotImplementedError()
+
+    def _post_check(self, data):
+        return NotImplementedError
+
+    def _post_predict(self, data):
+        return NotImplementedError()
+
+    def predict(self, data):
         return NotImplementedError()
 
 
-class _VisionSupervisePredictor(_Predictor):
+class VisionSupervisePredictor(_Predictor):
+    def __init__(self,  model: nn.Module, data: DatasetCollector, transform=None):
+        super(VisionSupervisePredictor, self).__init__(model, data, transform)
+
+
+class VisionUnsupervisePredictor(_Predictor):
+    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
+        super(VisionUnsupervisePredictor, self).__init__(model, data, transform)
+
+
+class TabularSupervisedPredictor(_Predictor):
     def __init__(self):
-        super(_VisionSupervisePredictor, self).__init__()
-
-    def batch(self, data):
-        transformed_data = self.transform(data)
-        transformed_data = transformed_data.to(self.device)
-
-        self.model.to(self.device)
-        self.model.eval()
-        pred = self.model(transformed_data)
-        return pred
-
-    def single(self, data):
-        pass
-
-    def topk(self):
-        pass
-
-
-class _VisionUnsupervisePredictor(_Predictor):
-    def __init__(self):
-        super(_VisionUnsupervisePredictor, self).__init__()
-
-
-class _TabularSupervisedPredictor(_Predictor):
-    def __init__(self):
-        super(_TabularSupervisedPredictor, self).__init__()
+        super(TabularSupervisedPredictor, self).__init__()
         
         
-class _TabularUnsupervisedPredictor(_Predictor):
+class TabularUnsupervisedPredictor(_Predictor):
     def __init__(self):
-        super(_TabularUnsupervisedPredictor, self).__init__()
+        super(TabularUnsupervisedPredictor, self).__init__()
         
 
 class TextSupervisedPredictor(_Predictor):
@@ -77,6 +74,3 @@ class AudioUnsupervisedPredictor(_Predictor):
         super(AudioUnsupervisedPredictor, self).__init__()
 
 
-class ConvPredictor(_VisionSupervisePredictor):
-    def __init__(self):
-        super(ConvPredictor, self).__init__()
