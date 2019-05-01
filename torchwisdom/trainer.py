@@ -20,19 +20,25 @@ __all__ = ['Trainer']
 
 
 class Trainer(object):
-    def __init__(self, data: DatasetCollector, model: Module, criterion: Module, metrics: List,
-                 optimizer: Optimizer = None, callbacks: List = None, device='cpu'):
+    def __init__(self, data: DatasetCollector, model: Module,
+                 criterion: Module = None, optimizer: Optimizer = None,
+                 metrics: List = [], callbacks: List = None):
+
         self.data = data
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
         self.metrics = metrics
-        self.device = device
+        self.device = "cpu"
         self.callbacks = callbacks
         self.optwr: OptimizerWrapper = None
         self.log_state = False
         # self._build_state_manager()
         # self._build_callback_handler()
+
+    def compile(self, optimizer, criterion):
+        self.optimizer = optimizer
+        self.criterion = criterion
 
     def set_log_state(self, log_state: bool):
         self.log_state = log_state
