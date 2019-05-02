@@ -8,6 +8,7 @@ import PIL.Image
 from torchwisdom.vision.transforms import transforms as ptransforms
 from torchvision.datasets import ImageFolder
 
+
 class SiamesePairDataset(data.Dataset):
     def __init__(self, root, ext='jpg', transform=None, pair_transform=None, target_transform=None):
         super(SiamesePairDataset, self).__init__()
@@ -156,8 +157,6 @@ class SiamesePairDataset(data.Dataset):
                 files_list.append(dpair[i])
 
         return files_list
-
-
 
 
 

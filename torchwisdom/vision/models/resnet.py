@@ -1,7 +1,6 @@
-import torch
 import torch.nn as nn
 from torchvision import models
-import torchwisdom.nn.layers as layers
+import torchwisdom.core.nn.layers as layers
 import torch.utils.model_zoo as model_zoo
 
 

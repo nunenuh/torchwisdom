@@ -1,10 +1,7 @@
-import time
 from typing import *
 import torch.nn as nn
-from torchwisdom.statemgr.state import *
-from torchwisdom.callback import Callback
-from torchwisdom.core import *
-
+from torchwisdom.core.statemgr.state import *
+from torchwisdom.core.callback import Callback
 
 __all__ = ['ModelCallback', 'ModelCheckPointCallback', 'CSVLoggerCallback']
 

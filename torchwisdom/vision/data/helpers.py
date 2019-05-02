@@ -90,11 +90,7 @@ class ImagesMeanStdFinder(object):
 
 
 
-def idx_to_class(class_to_idx: Dict):
-    out = {}
-    for k, v in class_to_idx.items():
-        out.update({v:k})
-    return out
+
 
 
 if __name__ == '__main__':

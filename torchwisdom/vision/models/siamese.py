@@ -5,7 +5,7 @@ from torchvision.models import resnet
 from torchvision.models import squeezenet
 import torch.utils.model_zoo as model_zoo
 from torchwisdom.vision.models import mobilenet
-import torchwisdom.nn.layers as layers
+import torchwisdom.core.nn.layers as layers
 
 
 __all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet', 'siamese_mobilenet']

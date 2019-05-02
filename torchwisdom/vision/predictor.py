@@ -1,13 +1,13 @@
-from torchwisdom.predictor import VisionSupervisePredictor
+from torchwisdom.core.predictor import VisionSupervisePredictor
 from .utils import *
 from typing import *
 import numpy as np
-import PIL
 from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchwisdom.utils import  DatasetCollector
+from torchwisdom.core.utils import DatasetCollector
+
 
 __all__ = ['ConvPredictor']
 
@@ -35,8 +35,10 @@ class ConvPredictor(VisionSupervisePredictor):
         id_data = identify_input(data)
         if id_data == 'string':
             out = Image.open(data)
+            out = out.convert("RGB")
         elif id_data == 'numpy':
             out = Image.fromarray(data)
+            out = out.convert("RGB")
         elif id_data == 'pil' or id_data == 'tensor':
             out = data
         else:
@@ -48,10 +50,11 @@ class ConvPredictor(VisionSupervisePredictor):
         is_clean = self._pre_check(data)
         if is_clean:
             loaded_data, loaded_type = self._pre_load(data)
-            if len(loaded_data)>1:
+            if type(loaded_data) != type(None):
                 if loaded_type == 'tensor':
                     feature: torch.Tensor = loaded_data
-                    feature = feature.unsqueeze(dim=0)
+                    if not is_tensor_batch_image(feature):
+                        feature = feature.unsqueeze(dim=0)
                 else:
                     feature: torch.Tensor = self.transform(loaded_data)
                     feature = feature.unsqueeze(dim=0)
@@ -66,7 +69,8 @@ class ConvPredictor(VisionSupervisePredictor):
             feature.to(self.device)
             self.model = self.model.to(self.device)
             self.model.eval()
-            prediction = self.model(feature)
+            with torch.no_grad():
+                prediction = self.model(feature)
         return prediction
 
     def _post_predict(self, prediction: torch.Tensor, use_topk: bool = False, kval: int = 5) -> Union[None, Tuple]:

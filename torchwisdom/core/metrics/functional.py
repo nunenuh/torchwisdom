@@ -78,7 +78,7 @@ def dice_coeff(y_pred: Tensor, y_true: Tensor, smooth: float = 1.) -> Tensor:
     return 1 - (2. * intersection + smooth) / (y_pred.sum() + y_true.sum() + smooth)
 
 
-#got idea from fastai
+# got idea from fastai
 def mean_absolute_error(y_pred: Tensor, y_true: Tensor) -> Tensor:
     # if not core.is_flatten_same_dim(y_pred, y_true): y_pred = core.flatten_argmax(y_pred)
     y_pred, y_true = core.flatten_check(y_pred, y_true)

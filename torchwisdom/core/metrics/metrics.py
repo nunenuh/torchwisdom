@@ -1,11 +1,5 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torchwisdom.callback import Callback
-from typing import *
-import torchwisdom.metrics.functional as M
-from torchwisdom import core
-
+import torchwisdom.core.metrics.functional as M
 
 __all__ = ['AverageMetrics', 'AccuracyTopK', 'Accuracy', 'AccuracyThreshold',
            'DiceCoef', 'MAE', 'MSE', 'MSLE', 'RMSE']

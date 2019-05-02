@@ -1,9 +1,6 @@
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torchvision.transforms as transforms
-from typing import *
-from .utils import DatasetCollector
+from torchwisdom.core.utils import DatasetCollector
 
 __all__ = []
 

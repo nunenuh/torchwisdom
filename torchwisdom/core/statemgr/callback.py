@@ -1,10 +1,7 @@
 from typing import *
-from torchwisdom.statemgr.state import *
-from torchwisdom.callback import Callback
+from torchwisdom.core.callback import Callback
 import time
-from torchwisdom.core import *
-# from torchwisdom.trainer import Trainer
-# from torchwisdom.callback import CallbackHandler
+from torchwisdom.core.statemgr.state import StateManager
 
 
 class StateManagerCallback(Callback):

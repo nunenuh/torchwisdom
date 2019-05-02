@@ -1,4 +1,4 @@
-from torchwisdom.utils import DatasetCollector
+from torchwisdom.core.utils import DatasetCollector
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from pathlib import Path

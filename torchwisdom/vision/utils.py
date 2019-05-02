@@ -8,7 +8,10 @@ import PIL.JpegImagePlugin
 
 
 __all__ = ['is_file_pil_compatible', 'is_numpy_pil_compatible', 'identify_input',
-           'is_tensor_single_image', 'is_tensor_batch_image', 'is_pil_verified', 'is_tensor_image_compatible']
+           'is_tensor_single_image', 'is_tensor_batch_image', 'is_pil_verified',
+           'is_tensor_image_compatible', 'is_tensor_image', 'is_tensor_label',
+           'is_tensor_single_label', 'is_tensor_batch_label', 'is_tensor_multiclass_label',
+           'is_tensor_singleclass_label']
 
 
 def is_file_pil_compatible(path: str) -> bool:
@@ -68,7 +71,7 @@ def is_pil_verified(data: Image.Image) -> bool:
         return False
 
 
-def identify_input(data: Union[str, np.ndarray, torch.Tensor, Image]):
+def identify_input(data: Union[str, np.ndarray, torch.Tensor, Image.Image]):
     if type(data) == str:
         return 'string'
     elif type(data) == np.ndarray:
@@ -79,5 +82,43 @@ def identify_input(data: Union[str, np.ndarray, torch.Tensor, Image]):
         return "pil"
     else:
         return None
+
+
+def is_tensor_image(data: torch.Tensor) -> bool:
+    return is_tensor_batch_image(data)
+
+
+def is_tensor_label(data: torch.Tensor) -> bool:
+    if data.dim() == 2:
+        return True
+    else:
+        return False
+
+
+def is_tensor_single_label(data: torch.Tensor) -> bool:
+    if is_tensor_label(data) and data.size()[0] == 1:
+        return True
+    return False
+
+
+def is_tensor_batch_label(data: torch.Tensor) -> bool:
+    if is_tensor_label(data) and data.size()[0] > 1:
+        return True
+    return False
+
+
+def is_tensor_multiclass_label(prediction: torch.Tensor) -> bool:
+    if prediction.dim() == 2:
+        if prediction.size()[1] > 1:
+            return True
+    return False
+
+
+def is_tensor_singleclass_label(prediction: torch.Tensor) -> bool:
+    if prediction.dim() == 2:
+        if prediction.size()[1] == 1:
+            return True
+    return False
+
 
 
