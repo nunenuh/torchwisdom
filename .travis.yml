@@ -2,9 +2,15 @@ language: python
 python:
   - 3.6
   - 3.7
-dist: trusty
+
+dist:
+  trusty
+
+env:
+  CODECOV_TOKEN="ac85f735-7a72-4c3c-b032-6e828446833a"
 
 sudo: false
+
 branches:
   only:
     - master
