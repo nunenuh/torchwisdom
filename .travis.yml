@@ -8,8 +8,12 @@ sudo: false
 branches:
   only:
     - master
+    - dev
+    - stagging
+  except:
+    - stagging
 
-# Install the codecov pip dependency
+    # Install the codecov pip dependency
 install:
   - pip install codecov
 
