@@ -1,6 +1,5 @@
 # torchwisdom
-==================================
-[![build](https://travis-ci.org/nunenuh/torchwisdom.svg?branch=dev)](https://travis-ci.org/nunenuh/torchwisdom)
+[![Build Status](https://travis-ci.org/nunenuh/torchwisdom.svg?branch=dev)](https://travis-ci.org/nunenuh/torchwisdom)
 [![codecov](https://codecov.io/gh/nunenuh/torchwisdom/branch/master/graph/badge.svg)](https://codecov.io/gh/nunenuh/torchwisdom)
 [![issue](https://img.shields.io/github/issues/nunenuh/torchwisdom.svg)](https://github.com/nunenuh/torchwisdom/issues)
 [![GitHub license](https://img.shields.io/github/license/nunenuh/torchwisdom.svg)](https://github.com/nunenuh/torchwisdom/blob/master/LICENSE)
