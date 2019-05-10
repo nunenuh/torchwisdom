@@ -1,8 +1,8 @@
-
 # My Custom gitignore
 .idea
 testnote/*
 notebook/*
+*.egg-info/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
