@@ -71,8 +71,6 @@ class TabularSupervisedPredictor(_Predictor):
         return kwargs
 
 
-
-
 class TabularUnsupervisedPredictor(_Predictor):
     def __init__(self):
         super(TabularUnsupervisedPredictor, self).__init__()
@@ -143,13 +141,13 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
             return class_index, class_label
         return False
 
-    def _build_topk_series(self, predict, data_dict, target_columns, kval):
+    @staticmethod
+    def _build_topk_series( predict, data_dict, target_columns, kval):
         for i in range(kval):
             percent = predict[0]
             classes = predict[2]
             data = []
             for cls, prc in zip(classes, percent):
-                # print(cls[i], prc[i])
                 if len(cls)==1:
                     data.append(f"{cls[0]} ({prc[0]*100:.4f}%)")
                 else:
@@ -166,8 +164,6 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
                 target = target.unsqueeze(dim=0)
             target = self._class_label(target[0])
 
-        # print(target, predict)
-
         data_dict = {}
         for idx, col in enumerate(feature_columns):
             data_dict.update({col: feature[:, idx]})
@@ -179,8 +175,6 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
             self._build_topk_series(predict, data_dict, target_columns, kval)
         elif len(predict) == 2:
             data_dict.update({target_columns[0] + "_predict": predict[1]})
-
-
 
         df = pd.DataFrame(data_dict)
         return df
@@ -230,8 +224,6 @@ class TabularRegressorPredictor(TabularSupervisedPredictor):
     def _post_check(self, prediction: torch.Tensor) -> bool:
         # check output is clean (classfier label image, not image)
         return True
-
-        # print(df.to_html())
 
     @staticmethod
     def _show_as_dataframe(feature: torch.Tensor, predict: torch.Tensor,
