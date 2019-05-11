@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 # inspiration from
 # https://github.com/pytorch/pytorch/issues/1249
-# github.com/jeffwen/road_building_extraction/blob/master/src/utils/callback.py
+# github.com/jeffwen/road_building_extraction/blob/master/src/utils/core.py
 # and other source
 def dice_coeff(input, target, smooth=1.):
     input_flat = input.view(-1)
@@ -23,7 +23,7 @@ class DiceLoss(nn.Module):
         return 1 - dcoeff
 
 # inspiration from
-# github.com/jeffwen/road_building_extraction/blob/master/src/utils/callback.py
+# github.com/jeffwen/road_building_extraction/blob/master/src/utils/core.py
 # and other source
 class BCEDiceLoss(nn.Module):
     def __init__(self):
