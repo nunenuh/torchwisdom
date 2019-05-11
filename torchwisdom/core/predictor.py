@@ -36,20 +36,10 @@ class VisionSupervisePredictor(_Predictor):
         super(VisionSupervisePredictor, self).__init__(model, data, transform)
 
 
-class VisionUnsupervisePredictor(_Predictor):
+class VisionSemiSupervisePredictor(_Predictor):
     def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
-        super(VisionUnsupervisePredictor, self).__init__(model, data, transform)
+        super(VisionSemiSupervisePredictor, self).__init__(model, data, transform)
 
-
-class TabularSupervisedPredictor(_Predictor):
-    def __init__(self):
-        super(TabularSupervisedPredictor, self).__init__()
-        
-        
-class TabularUnsupervisedPredictor(_Predictor):
-    def __init__(self):
-        super(TabularUnsupervisedPredictor, self).__init__()
-        
 
 class TextSupervisedPredictor(_Predictor):
     def __init__(self):
