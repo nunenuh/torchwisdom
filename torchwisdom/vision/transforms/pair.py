@@ -2,7 +2,7 @@ import random
 import PIL
 from PIL import Image
 import torchvision.transforms.functional as F
-from torchvision import transforms
+import torchvision.transforms as transforms
 
 __all__ = ['PairCompose', 'PairResize', 'PairCenterCrop', 'PairColorJitter', 'PairPad',
            'PairRandomAffine', 'PairRandomApply', 'PairRandomCrop', 'PairRandomHorizontalFlip',
