@@ -1,5 +1,5 @@
 import torch
-import torchwisdom.core.metrics.functional as M
+from ..metrics import functional as M
 
 __all__ = ['AverageMetrics', 'AccuracyTopK', 'Accuracy', 'AccuracyThreshold',
            'DiceCoef', 'MAE', 'MSE', 'MSLE', 'RMSE']
@@ -78,5 +78,3 @@ class RMSE(object):
     def __call__(self, y_pred: torch.Tensor, y_true: torch.Tensor,
                  size_average=None, reduce=None, reduction: str = 'mean'):
         return M.root_mean_squared_error(y_pred, y_true, size_average, reduce, reduction)
-
-
