@@ -26,7 +26,7 @@ install:
 # Run the unit test
 script:
   - coverage run test/run_test.py
-  - bash sonar_scanner.sh
+#  - bash sonar_scanner.sh
 
 # Push the results back to codecov
 after_success:
