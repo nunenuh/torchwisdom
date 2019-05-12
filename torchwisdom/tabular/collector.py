@@ -67,3 +67,13 @@ class CSVDataCollector(object):
         return self.data_collector
 
 
+def categorical_dataset(root, target_columns, batch_size=64, valid_size=0.2, **kwargs):
+    return CSVDataCollector(root, target_columns=target_columns,
+                            target_dtype='categorical', batch_size=batch_size,
+                             valid_size=valid_size, **kwargs).collector()
+
+
+def regression_dataset(root, target_columns, batch_size=64, valid_size=0.2, **kwargs):
+    return CSVDataCollector(root, target_columns=target_columns,
+                            target_dtype='continues', batch_size=batch_size,
+                            valid_size=valid_size,  **kwargs).collector()
