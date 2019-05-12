@@ -5,10 +5,10 @@ from torchvision.models import resnet
 from torchvision.models import squeezenet
 import torch.utils.model_zoo as model_zoo
 from torchwisdom.vision.models import mobilenet
-import torchwisdom.nn.layers as layers
+from torchwisdom.core import nn as layers
 
 
-__all__ = ['SiameseResNet','SiameseTrainer','siamese_resnet', 'siamese_mobilenet']
+__all__ = ['SiameseResNet','SiameseModelTrainer','siamese_resnet', 'siamese_mobilenet']
 
 
 class SiameseResNet(resnet.ResNet):
@@ -31,9 +31,9 @@ class SiameseSqueezeNet(squeezenet.SqueezeNet):
 
 
 
-class SiameseTrainer(nn.Module):
+class SiameseModelTrainer(nn.Module):
     def __init__(self, siamese_base):
-        super(SiameseTrainer, self).__init__()
+        super(SiameseModelTrainer, self).__init__()
         self.siamese_base = siamese_base
 
     def forward_once(self, x):
@@ -58,7 +58,7 @@ def siamese_resnet(pretrained_backbone=True, encoder_digit=64, version=18, in_ch
         backbone.load_state_dict(model_zoo.load_url(resnet.model_urls[name_ver]))
     expansion = 512 * backbone.block_expansion
     backbone.fc = layers.Classfiers(in_features=expansion, n_classes=encoder_digit)
-    model_trainer = SiameseTrainer(backbone)
+    model_trainer = SiameseModelTrainer(backbone)
 
     return model_trainer, backbone
 
@@ -72,7 +72,7 @@ def siamese_mobilenet(pretrained_backbone=True, encoder_digit=64, version=2, in_
         mobilenetv2_url = 'https://raw.githubusercontent.com/d-li14/mobilenetv2.pytorch/master/pretrained/mobilenetv2-0c6065bc.pth'
         backbone.load_state_dict(model_zoo.load_url(mobilenetv2_url))
     backbone.classifier= layers.SimpleClassifiers(in_features=backbone.output_channel, n_classes=encoder_digit)
-    model_trainer = SiameseTrainer(backbone)
+    model_trainer = SiameseModelTrainer(backbone)
 
     return model_trainer, backbone
 
@@ -87,7 +87,7 @@ def siamese_squeezenet(pretrained_backbone=True, encoder_digit=64, version=1.1, 
         backbone.load_state_dict(model_zoo.load_url(squeezenet.model_urls[name_ver]))
     backbone.num_classes = encoder_digit
     backbone.classifier = layers.SqueezeNetCustomClassifers(num_classes=encoder_digit)
-    model_trainer = SiameseTrainer(backbone)
+    model_trainer = SiameseModelTrainer(backbone)
     return model_trainer, backbone
 
 
