@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 from os import path
+
 here = path.abspath(path.dirname(__file__))
-# Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
@@ -40,7 +40,7 @@ setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
 
     python_requires='>=3.5, <=3.6',
-    install_requires=['pytorch'],
+    install_requires=['torch', 'torchvision'],
 
     extras_require={  # Optional
         'dev': ['check-manifest'],
