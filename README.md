@@ -1,4 +1,5 @@
 # torchwisdom
+<<<<<<< HEAD
 [![Build Status](https://travis-ci.org/nunenuh/torchwisdom.svg?branch=dev)](https://travis-ci.org/nunenuh/torchwisdom)
 [![codecov](https://codecov.io/gh/nunenuh/torchwisdom/branch/master/graph/badge.svg)](https://codecov.io/gh/nunenuh/torchwisdom)
 [![issue](https://img.shields.io/github/issues/nunenuh/torchwisdom.svg)](https://github.com/nunenuh/torchwisdom/issues)
@@ -28,3 +29,7 @@ Some of the package that is available in this library are:
 	* vision
 
 The package of the library represents a toolset to train a kind of data, from tabular, audio, text and vision kind of dataset. This library is still under construction to version 0.1 alpha.
+=======
+Collection of my tools to solve problem in my work
+test change documentation
+>>>>>>> c3e52ae9f30a19e2da1a32312659fe72b99fa81f
