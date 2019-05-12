@@ -23,9 +23,16 @@ branches:
 install:
   - pip install codecov
 
+addons:
+  sonarcloud:
+    organization: "torchwisdom" # the key of the org you chose at step #3
+    token:
+        secure: "o9G3L6rWaVshAgUpLlx+9R/VeUhB5CS8F0zYC0RO+7hKB0Dhl+ShyK1Re4E0bbZ5FU8gtViJJwQuJSBeV6ZbvN9cjOmdyAEi/ji5Wtq6aYeip+0b3BM79tABc1xRq/xNBT/cPJ1YYZhN/1zwpWmmvdHGNijfAmhxq86EOeqHIdeaIQWOkJhKOKpMleKLlNtunegNheePb5DH/UcfgUbdWT7TceDPQCEo+4UTPlintuoEDOcmxvUdRW4FXWBI/jZbQlVkZu4VNLd5mrkjmOF14ZVqB+VUkn4rIr8irNMMyTNYAdQ8/aoqd0wME6IP15OZ2r7ZX4kRqcGCMeSJKHYV1vu2fNyrY883hmIP6NaYZo1FHm5uGdA0ZgM5tFl+Lz9jUcFxC4CaGIm/e1t8oCOxyASmuv1ZCj3DBtMMXVf/2zLWnn2w51D6iBlf+XSgcGq3kI01fSrPeGS0KJJi23Yd/t/e0jrtCbhLbucFoootCCY3EQHXKxLeHDyoU4Nqh0zy0Gpcl0XzKx9DxPvGFAoNKSpyiymfDQbWrN9lxl3b/eKNlBrdM4NpVMZ5TT0y3nfmua/vjXKAKjWFaeBo1irWwr81EYzlmUklVgFZDp++MD0LNFMGLEwmkWpfHqSm+3DLCX9tu34AALtQgbauqYrGKgTMekcarU6LQ4+VvMnlCZE="
+
 # Run the unit test
 script:
   - coverage run test/run_test.py
+  - sonar-scanner
 #  - bash sonar_scanner.sh
 
 # Push the results back to codecov
