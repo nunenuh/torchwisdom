@@ -1,7 +1,7 @@
 language: python
 python:
+  - 3.5
   - 3.6
-  - 3.7
 
 dist:
   trusty
@@ -26,6 +26,7 @@ install:
 # Run the unit test
 script:
   - coverage run test/run_test.py
+  - bash sonar_scanner.sh
 
 # Push the results back to codecov
 after_success:
