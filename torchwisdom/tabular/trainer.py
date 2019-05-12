@@ -1,7 +1,10 @@
 import torch
+from torch import optim, nn
 from torch.nn import Module
 from torch.optim import Optimizer
 from typing import *
+
+from torchwisdom.core.callback import AccuracyCallback, AccuracyRegressionCallback
 from torchwisdom.core.trainer.supervise import *
 from torchwisdom.core.utils import DatasetCollector
 from torchwisdom.tabular.predictor import TabularClassifierPredictor, TabularRegressorPredictor
@@ -118,3 +121,15 @@ class TabularRegressorTrainer(RegressorTrainer):
 
 
 
+def classifier_trainer(data, model, opt=optim.Adam, crit=nn.CrossEntropyLoss()):
+    trainer = TabularClassifierTrainer(data, model)
+    trainer.compile(optimizer=opt, criterion=crit)
+    trainer.metrics = [AccuracyCallback()]
+    return trainer
+
+
+def regressor_trainer(data, model, opt=optim.Adam, crit=nn.MSELoss()):
+    trainer = TabularRegressorTrainer(data, model)
+    trainer.compile(optimizer=opt, criterion=crit)
+    trainer.metrics = [AccuracyRegressionCallback(threshold=0.8)]
+    return trainer
