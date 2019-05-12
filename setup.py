@@ -7,7 +7,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='torchwisdom',
-    version='0.0.2-dev1',
+    version='0.0.2.dev2',
     description='A High Level API for PyTorch',
     long_description=long_description,
     long_description_content_type='text/markdown',
