@@ -25,6 +25,11 @@ class SuperviseTrainer(Trainer):
         self.optimizer = optimizer
         self.criterion = criterion
 
+    def save_best(self, val: bool, mode='min', metric='val_loss'):
+        self.save_best_state = val
+        self.save_best_mode = mode
+        self.save_best_metric = metric
+
     def _build_callback_handler(self):
         self.handler = build_default_callback_handler(self)
 
