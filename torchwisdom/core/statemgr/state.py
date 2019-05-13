@@ -74,61 +74,69 @@ class Store(object):
             return False
 
 
-    def save(self, id, state):
+    def save(self, id, state, is_best=False):
         # check is if curr and last file is exist
         # check which file is newer
         # update the file with lowest status
         if self._is_dir(id):
-            if self._is_exist(id, 'curr') and self._is_exist(id, 'last'):
-                path = self._get_previous_saved_file(id)
+            if is_best:
+                best_filename = id + f"_best.pt"
+                path: Path = state_home.joinpath(id).joinpath(best_filename)
                 torch.save(state, str(path))
-                # print(f'File saved {str(path)}')
-            elif self._is_exist(id, 'curr') and not self._is_exist(id, 'last'):
-                curr_filename = id + f"_last.pt"
-                path = state_home.joinpath(id).joinpath(curr_filename)
-                torch.save(state, str(path))
-                # print(f'File saved {str(path)}')
             else:
-                curr_filename = id + f"_curr.pt"
-                path: Path = state_home.joinpath(id).joinpath(curr_filename)
-                torch.save(state, str(path))
-                # print(f'File saved {str(path)}')
-
+                if self._is_exist(id, 'curr') and self._is_exist(id, 'last'):
+                    path = self._get_previous_saved_file(id)
+                    torch.save(state, str(path))
+                    # print(f'File saved {str(path)}')
+                elif self._is_exist(id, 'curr') and not self._is_exist(id, 'last'):
+                    curr_filename = id + f"_last.pt"
+                    path = state_home.joinpath(id).joinpath(curr_filename)
+                    torch.save(state, str(path))
+                    # print(f'File saved {str(path)}')
+                else:
+                    curr_filename = id + f"_curr.pt"
+                    path: Path = state_home.joinpath(id).joinpath(curr_filename)
+                    torch.save(state, str(path))
+                    # print(f'File saved {str(path)}')
         else:
             #if dir does not exist than create dir
             path: Path = state_home.joinpath(id)
             os.makedirs(str(path), exist_ok=True)
 
-    def load(self, id,  map_location: Any = None) -> Any:
+
+    def load(self, id,  map_location: Any = None, is_best=False) -> Any:
         curr_test = self._test_load(id, 'curr')
         last_test = self._test_load(id, 'last')
-        if curr_test and last_test:
-            path = self._get_last_saved_file(id)
-            self.state = torch.load(str(path), map_location=map_location)
-            print(f"File {str(path)} is loaded!")
-            return self.state
-        elif curr_test and not last_test:
-            curr_filename = id + f"_curr.pt"
-            path: Path = state_home.joinpath(id).joinpath(curr_filename)
-            self.state = torch.load(str(path), map_location=map_location)
-            print(f"File {str(path)} is loaded!")
-            return self.state
-        elif not curr_test and last_test:
-            last_filename = id + f"_last.pt"
-            path: Path = state_home.joinpath(id).joinpath(last_filename)
-            self.state = torch.load(str(path), map_location=map_location)
-            print(f"File {str(path)} is loaded!")
-            return self.state
+        best_test = self._test_load(id, 'best')
+        if is_best:
+            if best_test:
+                best_filename = id + f"_best.pt"
+                path: Path = state_home.joinpath(id).joinpath(best_filename)
+                self.state = torch.load(str(path), map_location=map_location)
+                print(f"File {str(path)} is loaded!")
+                return self.state
+            else:
+                raise FileNotFoundError(f"File is not found")
         else:
-            raise FileNotFoundError(f"File is not found")
-
-
-        # path = state_home.joinpath(id).joinpath(filename)
-        # if path.exists() and path.is_file():
-        #     self.state = torch.load(str(path), map_location=map_location)
-        #     return self.state
-        # else:
-        #     raise FileNotFoundError(f"File {str(path)} is not found")
+            if curr_test and last_test:
+                path = self._get_last_saved_file(id)
+                self.state = torch.load(str(path), map_location=map_location)
+                print(f"File {str(path)} is loaded!")
+                return self.state
+            elif curr_test and not last_test:
+                curr_filename = id + f"_curr.pt"
+                path: Path = state_home.joinpath(id).joinpath(curr_filename)
+                self.state = torch.load(str(path), map_location=map_location)
+                print(f"File {str(path)} is loaded!")
+                return self.state
+            elif not curr_test and last_test:
+                last_filename = id + f"_last.pt"
+                path: Path = state_home.joinpath(id).joinpath(last_filename)
+                self.state = torch.load(str(path), map_location=map_location)
+                print(f"File {str(path)} is loaded!")
+                return self.state
+            else:
+                raise FileNotFoundError(f"File is not found")
 
 
 class Logger(object):
@@ -182,6 +190,7 @@ class Logger(object):
         data = {'id': [], 'name': [], 'desc': [], 'created': [], "modified": []}
         return pd.DataFrame(data, columns=['id', 'name', 'desc', 'created', 'modified'])
 
+
 class State(dict):
     def __init__(self, *args, **kwargs):
         super(State, self).__init__(*args, **kwargs)
@@ -229,8 +238,6 @@ class StateManager(object):
         if not self.logger().is_exist(self.id):
             self.logger().add(self.id, name=name, desc=desc)
 
-
-
     def _build_defaults_state(self):
         self._state = {
             "data": {
@@ -257,6 +264,7 @@ class StateManager(object):
                 "name": "",
                 "desc": "",
                 "epoch": {'start': 0, 'curr': 0, 'num': 0, 'time': [], 'time_start': 0, 'time_end': 0, 'remain': []},
+                "progress": {},
                 "lr": 0.01,
                 "created": "",
                 "modified": ""
@@ -271,9 +279,6 @@ def random_generator():
     h.update(id_encode)
     hid = h.hexdigest()
     return hid
-
-
-
 
 
 if __name__ == '__main__':
