@@ -1,9 +1,7 @@
-from fastprogress import master_bar
-from fastprogress.fastprogress import isnotebook
-from torchwisdom.core.callback import Callback
-from typing import *
-from torchwisdom.core.statemgr import StateManager
 from datetime import timedelta
+from typing import *
+
+from fastprogress.fastprogress import isnotebook
 
 
 # __all__ = []

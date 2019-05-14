@@ -1,6 +1,8 @@
-from torchwisdom.core.callback import Callback
-from torchwisdom.core.trainer.progress import *
+from .core import Callback
+from ...core.logger.progress import *
 from typing import *
+from ..statemgr import StateManager
+from fastprogress import master_bar
 
 
 class ProgressBarCallback(Callback):
@@ -91,7 +93,6 @@ class ProgressBarCallback(Callback):
                 mbar.write(line, table=True)
             else:
                 mbar.write(line, table=False)
-
 
 
 class CSVLoggerCallback(Callback):

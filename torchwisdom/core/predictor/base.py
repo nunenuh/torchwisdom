@@ -61,6 +61,8 @@ class Predictor(_Predictor):
 class VisionSupervisePredictor(Predictor):
     def __init__(self,  file: Union[str, Dict], **kwargs: Any):
         super(VisionSupervisePredictor, self).__init__(file, **kwargs)
+        self.model = self.model_state.class_obj
+        self.transform = self.data_state.transform
 
 
 class VisionSemiSupervisePredictor(Predictor):

@@ -1,4 +1,3 @@
-from torchwisdom.core.predictor import VisionSupervisePredictor, VisionSemiSupervisePredictor
 from .utils import *
 from typing import *
 import numpy as np
@@ -6,17 +5,19 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchwisdom.core.utils import DatasetCollector
+from ..core.data import DatasetCollector
+from ..core.predictor import VisionSupervisePredictor, VisionSemiSupervisePredictor
+
 
 
 __all__ = ['ConvClassifierPredictor', 'ConvAutoEncoderPredictor']
 
 
 class ConvClassifierPredictor(VisionSupervisePredictor):
-    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
-        super(ConvClassifierPredictor, self).__init__(model, data, transform)
-        if transform is None:
-            self.transform = self.data.validset_attr.transform
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(ConvClassifierPredictor, self).__init__(file, **kwargs)
+        self.model = self.model_state.class_obj
+        self.transform = self.data_state.transform
 
     def _pre_check(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> bool:
         id_data = identify_input(data)
@@ -88,7 +89,7 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
 
     def _class_label(self, class_index: torch.Tensor, is_topk=False) -> Union[str, List, None]:
         class_label = []
-        classes = self.data.trainset_attr.classes
+        classes = self.data_state.classes
         if classes:
             if not is_topk:
                 if len(class_index) >= 2:
@@ -130,10 +131,9 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
 
 
 class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
-    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
-        super(ConvAutoEncoderPredictor, self).__init__(model, data, transform)
-        if transform is None:
-            self.transform = self.data.validset_attr.transform
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(ConvAutoEncoderPredictor, self).__init__(file, **kwargs)
+        self.model = self.model_state.class_obj
 
     def _pre_check(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> bool:
         id_data = identify_input(data)

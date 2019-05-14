@@ -15,6 +15,7 @@ class TabularSupervisedPredictor(Predictor):
     def __init__(self, file: Union[str, Dict], **kwargs: Any):
         super(TabularSupervisedPredictor, self).__init__(file, **kwargs)
         self.model = self.model_state.class_obj
+        self.transform = self.data_state.transform
 
     def _pre_check(self, *args: Any, **kwargs: Any) -> bool:
         la, lk = len(args), len(kwargs)

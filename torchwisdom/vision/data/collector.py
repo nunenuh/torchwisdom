@@ -1,9 +1,8 @@
-from torchwisdom.core.utils import DatasetCollector
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from pathlib import Path
-from torchwisdom.vision import transforms as ptransforms
-
+from ...core.data import DatasetCollector
+from ...vision import transforms as ptransforms
 
 
 class ImageClassifierData(object):
@@ -77,7 +76,7 @@ class ImageAutoEncoderData(object):
         ])
 
         self.trainset_transform = transforms.Compose([
-            transforms.Resize(self.image_size),
+            transforms.Resicollectorze(self.image_size),
             transforms.RandomResizedCrop(self.image_size),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
