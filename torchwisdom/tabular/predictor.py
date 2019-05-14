@@ -1,21 +1,20 @@
-from torchwisdom.core.predictor import _Predictor
-from .utils import *
 from typing import *
-import numpy as np
-from PIL import Image
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torchwisdom.core.utils import DatasetCollector
+
 import pandas as pd
+import torch
+import torch.nn.functional as F
+
+from ..core.predictor import Predictor
+from .utils import *
 
 
-__all__ = ['TabularClassifierPredictor']
+# __all__ = ['TabularClassifierPredictor']
 
 
-class TabularSupervisedPredictor(_Predictor):
-    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
-        super(TabularSupervisedPredictor, self).__init__(model, data, transform)
+class TabularSupervisedPredictor(Predictor):
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(TabularSupervisedPredictor, self).__init__(file, **kwargs)
+        self.model = self.model_state.class_obj
 
     def _pre_check(self, *args: Any, **kwargs: Any) -> bool:
         la, lk = len(args), len(kwargs)
@@ -71,16 +70,14 @@ class TabularSupervisedPredictor(_Predictor):
         return kwargs
 
 
-class TabularUnsupervisedPredictor(_Predictor):
-    def __init__(self):
-        super(TabularUnsupervisedPredictor, self).__init__()
+class TabularUnsupervisedPredictor(Predictor):
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(TabularUnsupervisedPredictor, self).__init__(file, **kwargs)
 
 
 class TabularClassifierPredictor(TabularSupervisedPredictor):
-    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
-        super(TabularClassifierPredictor, self).__init__(model, data, transform)
-        if transform is None:
-            self.transform = self.data.validset_attr.transform
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(TabularClassifierPredictor, self).__init__(file, **kwargs)
 
     def _predict(self, feature: torch.Tensor):
         prediction = None
@@ -107,7 +104,7 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
 
     def _class_label(self, class_index: torch.Tensor, is_topk=False) -> Union[str, List, None]:
         class_label = []
-        classes = self.data.trainset_attr.classes
+        classes = self.data_state.classes
         if classes:
             if not is_topk:
                 if len(class_index) >= 2:
@@ -200,10 +197,8 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
 
 
 class TabularRegressorPredictor(TabularSupervisedPredictor):
-    def __init__(self, model: nn.Module, data: DatasetCollector, transform=None):
-        super(TabularRegressorPredictor, self).__init__(model, data, transform)
-        if transform is None:
-            self.transform = self.data.validset_attr.transform
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(TabularRegressorPredictor, self).__init__(file, **kwargs)
 
     def _predict(self, feature: torch.Tensor):
         prediction = None

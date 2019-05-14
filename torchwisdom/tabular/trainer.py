@@ -4,10 +4,11 @@ from torch.nn import Module
 from torch.optim import Optimizer
 from typing import *
 
-from torchwisdom.core.callback import AccuracyCallback, AccuracyRegressionCallback
-from torchwisdom.core.trainer.supervise import *
-from torchwisdom.core.utils import DatasetCollector
-from torchwisdom.tabular.predictor import TabularClassifierPredictor, TabularRegressorPredictor
+from ..core.callback import AccuracyCallback, AccuracyRegressionCallback
+from ..core.trainer.supervise import *
+from ..core.data import DatasetCollector
+from ..tabular.predictor import TabularClassifierPredictor, TabularRegressorPredictor
+from ..core.exporter import ExporterBuilder
 
 
 class TabularClassifierTrainer(ClassifierTrainer):
@@ -18,10 +19,11 @@ class TabularClassifierTrainer(ClassifierTrainer):
 
         self.predictor: TabularClassifierPredictor = None
         self._set_device()
-        self._build_predictor()
 
     def _build_predictor(self):
-        self.predictor: TabularClassifierPredictor = TabularClassifierPredictor(self.model, self.data)
+        self.exporter = ExporterBuilder(self)
+        self.exporter.build_state()
+        self.predictor: TabularClassifierPredictor = TabularClassifierPredictor(self.exporter.state)
 
     def _data_loss_check_clean(self, pred, target):
         name = self.criterion.__class__.__name__
@@ -68,6 +70,8 @@ class TabularClassifierTrainer(ClassifierTrainer):
         kwargs['feature_columns'] = self.data.validset.feature_columns
         kwargs['target_columns'] = self.data.validset.target_columns
 
+        # self._build_exporter()
+        self._build_predictor()
         if transform:
             self.predictor.transform = transform
         result = self.predictor.predict(*args, **kwargs)
@@ -82,10 +86,8 @@ class TabularRegressorTrainer(RegressorTrainer):
 
         self.predictor: TabularRegressorPredictor = None
         self._set_device()
-        self._build_predictor()
+        # self._build_predictor()
 
-    def _build_predictor(self):
-        self.predictor: TabularRegressorPredictor = TabularRegressorPredictor(self.model, self.data)
 
     def _data_loss_check_clean(self, pred, target):
         name = self.criterion.__class__.__name__
@@ -106,6 +108,12 @@ class TabularRegressorTrainer(RegressorTrainer):
         pred = self.model(feature)
         return pred
 
+    def _build_predictor(self):
+        if self.exporter is None:
+            self.exporter = ExporterBuilder(self)
+        self.exporter.build_state()
+        self.predictor: TabularRegressorPredictor = TabularRegressorPredictor(self.exporter.state)
+
     def predict(self, *args, **kwargs: Any):
         use_topk, kval, transform = kwargs.get("use_topk", False), kwargs.get("kval", 2), \
                                     kwargs.get("transform", None)
@@ -113,6 +121,7 @@ class TabularRegressorTrainer(RegressorTrainer):
         kwargs['feature_columns'] = self.data.validset.feature_columns
         kwargs['target_columns'] = self.data.validset.target_columns
 
+        self._build_predictor()
         if transform:
             self.predictor.transform = transform
         result = self.predictor.predict(*args, **kwargs)

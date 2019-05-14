@@ -1,9 +1,7 @@
-from torchwisdom.core.utils import DatasetCollector
-import torchvision.transforms as transforms
-import torchvision.datasets as datasets
 from pathlib import Path
-from torchwisdom.vision import transforms as ptransforms
+
 from .datasets import CSVDataset
+from ..core.data import DatasetCollector
 
 
 class CSVDataCollector(object):
@@ -67,13 +65,13 @@ class CSVDataCollector(object):
         return self.data_collector
 
 
-def categorical_dataset(root, target_columns, batch_size=64, valid_size=0.2, **kwargs):
+def categorical_dataset(root, target_columns, batch_size=64, valid_size=0.2, **kwargs) -> DatasetCollector:
     return CSVDataCollector(root, target_columns=target_columns,
                             target_dtype='categorical', batch_size=batch_size,
                              valid_size=valid_size, **kwargs).collector()
 
 
-def regression_dataset(root, target_columns, batch_size=64, valid_size=0.2, **kwargs):
+def regression_dataset(root, target_columns, batch_size=64, valid_size=0.2, **kwargs) -> DatasetCollector:
     return CSVDataCollector(root, target_columns=target_columns,
                             target_dtype='continues', batch_size=batch_size,
                             valid_size=valid_size,  **kwargs).collector()

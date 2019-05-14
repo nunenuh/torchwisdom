@@ -1,11 +1,4 @@
-import random
-import PIL
-from PIL import Image
-import numpy as np
 import torch
-from torchvision import transforms
-import torchvision.transforms.functional as F
-
 
 __all__ = ['NumpyToTensor']
 
