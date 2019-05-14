@@ -1,9 +1,11 @@
 import torch
+import torch.optim as optim
 import torch.nn as nn
 from .helpers import *
-from ..utils.data import DatasetCollector
-import torch.optim as optim
+from ..data import DatasetCollector
 from ..optim.wrapper import *
+# from ..exporter import ExporterBuilder
+
 
 __all__ = ['Trainer']
 
@@ -23,10 +25,12 @@ class Trainer(object):
         self.optwr: OptimizerWrapper = None
         self.log_state = False
         self.predictor = None
+        self.state_manager = None
+        self.exporter = None
         self.save_best_state = False
         self.save_best_mode = 'min'
         self.save_best_metric = 'val_loss'
-        self._set_device()
+        # self._set_device()
 
     def compile(self, optimizer, criterion): return NotImplementedError()
     def resumeable(self, val: bool): ...

@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.optim.optimizer import Optimizer
 
 from torchwisdom.core.callback import *
-from torchwisdom.core.utils.data import DatasetCollector
+from torchwisdom.core.data import DatasetCollector
 from torchwisdom.vision.predictor import ConvClassifierPredictor
 from torchwisdom.core.trainer import ClassifierTrainer
 

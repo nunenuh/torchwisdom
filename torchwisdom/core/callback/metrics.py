@@ -94,12 +94,12 @@ class AccuracyCallback(AverageMetricsCallback):
 
     def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred, y_true = self._ypred_ytrue(**kwargs)
-        self.metric_train.update(M.accuracy(y_pred, y_true).item())
+        self.metric_train.update(M.accuracy(y_pred, y_true).item()*100)
         self.train_update()
 
     def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred, y_true = self._ypred_ytrue(**kwargs)
-        self.metric_valid.update(M.accuracy(y_pred, y_true).item())
+        self.metric_valid.update(M.accuracy(y_pred, y_true).item()*100)
         self.valid_update()
 
 

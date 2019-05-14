@@ -69,6 +69,17 @@ def line_builder(metric_state: Dict, epoch, tdelta, tremain):
     else:
         return build_line_console(line)
 
+def line_builder_dict_updater(line_dict: Dict, metric_state: Dict, epoch, tdelta, tremain):
+    train: Dict = metric_state.get('train')
+    valid: Dict = metric_state.get('valid')
+    line_dict['epoch'].append(epoch)
+    for key in train.keys():
+        line_dict['trn_'+key].append(train[key]['mean'][-1])
+        line_dict['val_'+key].append(valid[key]['mean'][-1])
+    line_dict['time'].append(tdelta)
+    line_dict['remain'].append(tremain)
+    return line_dict
+
 
 def line_builder_resume(metric_state: Dict, epoch, tdelta, tremain):
     train: Dict = metric_state.get('train')
@@ -101,6 +112,18 @@ def line_head_builder(metric_state: Dict):
         return line
     else:
         return build_line_console(line)
+
+
+def line_header_dict_builder(metric_state: Dict):
+    train: Dict = metric_state.get('train')
+
+    line = {'epoch': []}
+    for val in train.keys():
+        line.update({f'trn_{val}': []})
+        line.update({f'val_{val}': []})
+    line.update({'time': []})
+    line.update({'remain': []})
+    return line
 
 
 def graph_builder(metric_state: Dict, trainer_state: Dict):

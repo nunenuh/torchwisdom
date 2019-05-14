@@ -12,6 +12,12 @@ class StateManagerCallback(Callback):
     def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
         epoch_num = kwargs.get('epoch_num')
         trainer_state: Dict = self.statemgr.state.get('trainer')
+        trainer_state['id'] = self.statemgr.id
+        best_state = trainer_state.get("best")
+        best_state["best_state"] = self.trainer.save_best_state
+        best_state["best_mode"] = self.trainer.save_best_mode
+        best_state["best_metric"] = self.trainer.save_best_metric
+
         epoch_state: Dict = trainer_state.get('epoch')
         epoch_state['start'] = 0
         epoch_state['curr'] = 0
@@ -32,6 +38,14 @@ class StateManagerCallback(Callback):
         trainer_state: Dict = self.statemgr.state.get('trainer')
         epoch_state: Dict = trainer_state.get('epoch')
         epoch_state['num'] = epoch_num
+
+        self.statemgr.id = trainer_state['id']
+
+
+        best_state = trainer_state.get("best")
+        self.trainer.save_best_state = best_state["best_state"]
+        self.trainer.save_best_mode = best_state["best_mode"]
+        self.trainer.save_best_metric = best_state["best_metric"]
 
         dcoll_state: Dict = self.statemgr.state.get('data')
         dcoll_state['batch_size'] = self.trainer.data.batch_size
@@ -69,8 +83,41 @@ class StateManagerCallback(Callback):
         epoch_state['remain'].append(tremain)
         epoch_state['curr'] += 1
         if self.trainer.log_state:
-            self.statemgr.save()
+            if self.trainer.save_best_state:
+               self._execute_best_save()
+            else:
+                self.statemgr.save()
 
+    def _execute_best_save(self):
+        best_mode: str = self.trainer.save_best_mode
+        best_metric: str = self.trainer.save_best_metric
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        progress_state: Dict = trainer_state.get("progress", {})
+        best_state: Dict = trainer_state.get("best")
+        if trainer_state.get("epoch").get("curr")>1:
+            if best_metric in progress_state:
+                best_metric_list: List = progress_state.get(best_metric)
+                last_best = best_state.get("last_best")
+                last_value = best_metric_list[-1]
+                if last_best is not None:
+                    if best_mode == "min":
+                        logic = last_best > last_value
+                    else:
+                        logic = last_best < last_value
+
+                    if logic:
+                        best_state["last_best"] = last_value
+                        best_state["epoch_saved"] = trainer_state.get("epoch").get("curr")
+                        self.statemgr.save(is_best=True)
+                    else:
+                        self.statemgr.save()
+                else:
+                    best_state["last_best"] = last_value
+                    self.statemgr.save()
+            else:
+                self.statemgr.save()
+        else:
+            self.statemgr.save()
 
 
 def build_callback_state(trainer: object, statemgr: StateManager):

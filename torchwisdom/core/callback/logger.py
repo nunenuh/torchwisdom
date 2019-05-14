@@ -1,5 +1,5 @@
 from torchwisdom.core.callback import Callback
-from ..progress import *
+from torchwisdom.core.trainer.progress import *
 from typing import *
 
 
@@ -10,6 +10,9 @@ class ProgressBarCallback(Callback):
 
     def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
         self.mbar: master_bar = kwargs.get('master_bar')
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        metric_state = self.statemgr.state.get('metric')
+        trainer_state['progress'] = line_header_dict_builder(metric_state)
 
     def on_resume_begin(self, *args: Any, **kwargs: Any) -> None:
         self.mbar: master_bar = kwargs.get('master_bar')
@@ -62,6 +65,12 @@ class ProgressBarCallback(Callback):
             mbar.names = ['trn_loss', 'val_loss']
             if isnotebook():
                 mbar.update_graph(graph)
+
+        trainer_state: Dict = self.statemgr.state.get('trainer')
+        metric_state = self.statemgr.state.get('metric')
+        line_dict = trainer_state['progress']
+        line_builder_dict_updater(line_dict, metric_state, epoch, tdelta, tremain)
+
 
     def on_train_batch_end(self, *args: Any, **kwargs: Any) -> None:
         mbar: master_bar = kwargs.get('master_bar')

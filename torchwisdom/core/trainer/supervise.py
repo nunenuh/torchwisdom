@@ -1,13 +1,14 @@
 import torch
 import torch.nn as nn
-from fastprogress import master_bar, progress_bar
+from fastprogress import progress_bar
 from torch.nn.modules.module import Module
 from torch.optim import Optimizer
 
 from torchwisdom.core.optim.wrapper import OptimizerWrapper
-from torchwisdom.core.utils.data import DatasetCollector
+from torchwisdom.core.data import DatasetCollector
 from .base import Trainer
 from .helpers import *
+from ..exporter import ExporterBuilder
 
 
 __all__ = ['SuperviseTrainer', 'ClassifierTrainer', 'RegressorTrainer']
@@ -29,6 +30,25 @@ class SuperviseTrainer(Trainer):
         self.save_best_state = val
         self.save_best_mode = mode
         self.save_best_metric = metric
+
+    def load_best(self, id=None, from_last=True):
+        self._resume_load(id, from_last, is_best=True)
+        trainer_state: Dict = self.state_manager.state.get('trainer')
+        last_best = trainer_state.get("best").get("last_best")
+        best_mode = trainer_state.get("best").get("best_mode")
+        epoch_saved = trainer_state.get("best").get("epoch_saved")
+        print()
+        print(f"Best Saved Info\n"
+              f"metric watch\t: {self.save_best_metric}\n"
+              f"metric value\t: {last_best}\n"
+              f"metric mode\t: {best_mode}\n"
+              f"epoch taken\t: {epoch_saved}\n")
+
+
+
+        lr = trainer_state.get("lr")
+        self._build_optimizer(lr)
+        self._build_callback_handler_resume()  # CallbackHandler need to be the last to build
 
     def _build_callback_handler(self):
         self.handler = build_default_callback_handler(self)
@@ -116,18 +136,24 @@ class SuperviseTrainer(Trainer):
             self.handler.on_epoch_end(epoch=epoch, master_bar=mbar)
         self.handler.on_fit_end(epoch=epoch, master_bar=mbar)
 
-    def _resume_load(self, id, from_last):
+    def _resume_load(self, id, from_last, is_best=False):
+        import matplotlib.pyplot as plt
+        plt.switch_backend("nbAgg")
+
         self._build_state_manager()
         if id is not None:
             self.state_manager.load(id)
         if from_last:
-            self.state_manager.load_last()
-        self.optimizer = self.state_manager.state.get('optimizer').get("object")
-        self.model = self.state_manager.state.get('model').get("object")
+            self.state_manager.load_last(is_best=is_best)
+        self.optimizer = self.state_manager.state.get('optimizer').get("class_obj")
+        self.model = self.state_manager.state.get('model').get("class_obj")
         self.criterion = self.state_manager.state.get('criterion')
 
-    def resume(self, id: str = None, from_last: bool = True, **kwargs):
-        self._resume_load(id, from_last)
+        plt.switch_backend('module://ipykernel.pylab.backend_inline')
+
+
+    def resume(self, id: str = None, from_last: bool = True, is_best=False, **kwargs):
+        self._resume_load(id, from_last, is_best=is_best)
 
         trainer_state: Dict = self.state_manager.state.get('trainer')
         lr = trainer_state.get("lr")
@@ -145,6 +171,10 @@ class SuperviseTrainer(Trainer):
             self._validate(epoch, mbar)
             self.handler.on_epoch_end(epoch=epoch, master_bar=mbar)
         self.handler.on_resume_end(epoch=epoch, master_bar=mbar)
+
+    def export(self, path: str, **kwargs: Any):
+        self.exporter = ExporterBuilder(self)
+        self.exporter.export(path, **kwargs)
 
 
 class ClassifierTrainer(SuperviseTrainer):

@@ -228,13 +228,14 @@ class StateManager(object):
         self.id = id
         return self._state
 
-    def load_last(self):
+    def load_last(self, is_best=True):
         id = self.logger().last()['id']
-        self._state = self.store().load(id)
+        # print(id)
+        self._state = self.store().load(id, is_best=is_best)
         self.id = id
 
-    def save(self, name='', desc=''):
-        self.store().save(self.id, self._state)
+    def save(self, name='', desc='', is_best=False):
+        self.store().save(self.id, self._state, is_best=is_best)
         if not self.logger().is_exist(self.id):
             self.logger().add(self.id, name=name, desc=desc)
 
@@ -248,8 +249,8 @@ class StateManager(object):
             },
             "model": {
                 "state_dict": None,
-                "arch": None,
-                "object": None,
+                "class_name": None,
+                "class_obj": None,
             },
             "metric": {
                 "train": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}},
@@ -257,7 +258,7 @@ class StateManager(object):
                 "test": {'loss': {'val': [], 'mean': [], 'std': [], 'epoch': []}}
             },
             'criterion': None,
-            "optimizer": {'defaults': None, 'state_dict': None, 'classname': None, 'object': None},
+            "optimizer": {'defaults': None, 'state_dict': None, 'class_name': None, 'class_obj': None},
             "scheduler": {},
             "trainer": {
                 "id": "",
@@ -266,6 +267,13 @@ class StateManager(object):
                 "epoch": {'start': 0, 'curr': 0, 'num': 0, 'time': [], 'time_start': 0, 'time_end': 0, 'remain': []},
                 "progress": {},
                 "lr": 0.01,
+                "best": {
+                    'last_best': None,
+                    'best_state': False,
+                    'best_mode': 'min',
+                    'best_metric': 'val_loss',
+                    "epoch_saved": 0,
+                },
                 "created": "",
                 "modified": ""
             },

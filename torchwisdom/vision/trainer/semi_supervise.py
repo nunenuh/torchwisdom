@@ -4,8 +4,8 @@ from torch.nn.modules.module import Module
 from torch.optim import Optimizer
 
 from torchwisdom.core.trainer import SemiSuperviseTrainer
-from torchwisdom.core.utils.data import DatasetCollector
-from torchwisdom.vision.predictor import ConvClassifierPredictor, ConvAutoEncoderPredictor
+from torchwisdom.core.data import DatasetCollector
+from torchwisdom.vision.predictor import ConvAutoEncoderPredictor
 
 
 __all__ = ['AutoEncoderTrainer', 'SiameseTrainer', 'GANTrainer']

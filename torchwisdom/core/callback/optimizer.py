@@ -21,8 +21,8 @@ class OptimizerCallback(Callback):
         if hasattr(self.optimizer, 'defaults'):
             optim_state['defaults'] = self.optimizer.defaults
         optim_state['state_dict'] = self.optimizer.state_dict()
-        optim_state['classname'] = self.optimizer.__class__.__name__
-        optim_state['object'] = self.optimizer
+        optim_state['class_name'] = self.optimizer.__class__.__name__
+        optim_state['class_obj'] = self.optimizer
 
 class _LRSchedulerCallback(Callback):
     def __init__(self):

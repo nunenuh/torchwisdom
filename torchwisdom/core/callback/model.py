@@ -16,8 +16,8 @@ class ModelCallback(Callback):
         model: nn.Module = self.trainer.model
         model_state = self.statemgr.state.get('model')
         model_state['state_dict'] = model.state_dict()
-        model_state['classname'] = model.__class__.__name__
-        model_state['object'] = model
+        model_state['class_name'] = model.__class__.__name__
+        model_state['class_obj'] = model
 
 
 class ModelCheckPointCallback(Callback):

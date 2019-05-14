@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-from fastprogress import master_bar, progress_bar
+from fastprogress import progress_bar
 from torch.nn.modules.module import Module
 from torch.optim import Optimizer
 
 from torchwisdom.core.optim.wrapper import OptimizerWrapper
-from torchwisdom.core.utils.data import DatasetCollector
+from torchwisdom.core.data import DatasetCollector
 from .base import Trainer
 from .helpers import *
 
