@@ -5,21 +5,18 @@ from torch.nn.modules.module import Module
 from torch.optim import Optimizer
 
 from torchwisdom.core.optim.wrapper import OptimizerWrapper
-from torchwisdom.core.data import DatasetCollector
+from torchwisdom.core.data import DataCapsule
 from .base import Trainer
 from .helpers import *
-
 
 __all__ = ['SemiSuperviseTrainer']
 
 
 class SemiSuperviseTrainer(Trainer):
-    def __init__(self, data: DatasetCollector, model: Module,
+    def __init__(self, data: DataCapsule, model: Module,
                  criterion: Module = None, optimizer: Optimizer = None,
                  metrics: List = [], callbacks: List = None):
         super(SemiSuperviseTrainer, self).__init__(data, model, criterion, optimizer, metrics, callbacks)
-
-        self.bunch = self.data.bunch()
 
     def compile(self, optimizer, criterion):
         self.optimizer = optimizer
@@ -64,9 +61,9 @@ class SemiSuperviseTrainer(Trainer):
         self.handler.on_train_backward_end()
 
     def _train(self, epoch, mbar: master_bar):
-        self.handler.on_train_begin( master_bar=mbar)
+        self.handler.on_train_begin(master_bar=mbar)
         self.model.train()
-        train_loader = self.bunch['train']
+        train_loader = self.data.train_loader
         trainbar = progress_bar(train_loader, parent=mbar)
         for idx, (feature, target) in enumerate(trainbar):
             self.handler.on_train_batch_begin(batch_curr=idx, master_bar=mbar)
@@ -89,7 +86,7 @@ class SemiSuperviseTrainer(Trainer):
     def _validate(self, epoch, mbar: master_bar):
         self.handler.on_validate_begin(master_bar=mbar)
         self.model.eval()
-        valid_loader = self.bunch['valid']
+        valid_loader = self.data.valid_loader
         progbar = progress_bar(valid_loader, parent=mbar)
         with torch.no_grad():
             for idx, (feature, target) in enumerate(progbar):
@@ -98,8 +95,8 @@ class SemiSuperviseTrainer(Trainer):
                 target = target.to(device=self.device)
 
                 self._validate_forward(feature, target)
-                self.handler.on_validate_batch_end( master_bar=mbar)
-        self.handler.on_validate_end(epoch=epoch,  master_bar=mbar)
+                self.handler.on_validate_batch_end(master_bar=mbar)
+        self.handler.on_validate_end(epoch=epoch, master_bar=mbar)
 
     def fit(self, epoch_num, lr=0.01, wd=0, verbose=False, callbacks=None, **kwargs):
         self._build_optimizer(lr, weight_decay=wd, **kwargs)
@@ -134,9 +131,9 @@ class SemiSuperviseTrainer(Trainer):
         epoch_curr = trainer_state.get("epoch").get("curr")
         epoch_num = trainer_state.get("epoch").get("num")
         self._build_optimizer(lr)
-        self._build_callback_handler_resume()# CallbackHandler need to be the last to build
+        self._build_callback_handler_resume()  # CallbackHandler need to be the last to build
 
-        mbar = master_bar(range(epoch_curr-1, epoch_num))
+        mbar = master_bar(range(epoch_curr - 1, epoch_num))
         self.handler.on_resume_begin(epoch_num=epoch_num, master_bar=mbar)
         for epoch in mbar:
             self.handler.on_epoch_begin(epoch=epoch, master_bar=mbar)

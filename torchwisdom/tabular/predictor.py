@@ -6,9 +6,10 @@ import torch.nn.functional as F
 
 from ..core.predictor import Predictor
 from .utils import *
+import numpy as np
 
-
-# __all__ = ['TabularClassifierPredictor']
+__all__ = ['TabularSupervisedPredictor', 'TabularUnsupervisedPredictor',
+           'TabularClassifierPredictor', 'TabularRegressorPredictor']
 
 
 class TabularSupervisedPredictor(Predictor):
@@ -17,58 +18,32 @@ class TabularSupervisedPredictor(Predictor):
         self.model = self.model_state.class_obj
         self.transform = self.data_state.transform
 
-    def _pre_check(self, *args: Any, **kwargs: Any) -> bool:
-        la, lk = len(args), len(kwargs)
-        if la == 0 and lk == 0:
-            return False
-        elif la > 0 and lk > 0:
-            return False
-        else:
-            return True
+    def _pre_check(self, feature: Any = None):
+        # print(feature.dim())
+        pass
 
-    def _pre_predict(self, *args: Any, **kwargs: Any) -> torch.Tensor:
-        is_clean = self._pre_check(*args, **kwargs)
-        if is_clean:
-            if len(args) > 0 and len(kwargs) == 0:
-                data = torch.Tensor([args])
-            else:
-                if 'csv_file' in kwargs:
-                    csv_file = kwargs.get('csv_file')
-                    frame = pd.read_csv(csv_file)
-                    data = torch.from_numpy(frame.values).float()
-                elif 'dataframe' in kwargs:
-                    frame = kwargs.get('dataframe')
-                    data = torch.from_numpy(frame.values).float()
-                elif 'tensor_data' in kwargs:
-                    data = kwargs.get('tensor_data')
-                    if data.dim() <2:
-                        data = data.unsqueeze(dim=0)
-                elif 'numpy_data' in kwargs:
-                    numpy_data = kwargs.get('numpy_data')
-                    data = torch.from_numpy(numpy_data).float()
-                elif 'list_data' in kwargs:
-                    list_data = kwargs.get("list_data")
-                    data = torch.Tensor([list_data]).float()
-                else:
-                    data = None
+    def _pre_predict(self, feature: Union[str, pd.DataFrame, torch.Tensor, np.ndarray, List] = None,
+                     use_transform=True) -> torch.Tensor:
+        self._pre_check(feature)
+        if type(feature) == str:
+            frame = pd.read_csv(feature)
+            data = frame.values
+        elif type(feature) == pd.DataFrame:
+            data = feature.values
+        elif type(feature) == torch.Tensor:
+            data = feature.numpy()
+            if feature.dim() < 2:
+                data = feature.unsqueeze(dim=0)
+                data = data.numpy()
+        elif type(feature) == np.ndarray:
+            data = feature
+        elif type(feature) == list:
+            data = np.array([feature])
         else:
-            data = None
-
+            raise TypeError("Incompatible type for continue processing to model!")
+        if use_transform:
+            data = self.transform(data)
         return data
-
-    @staticmethod
-    def _clean_remove_kwargs(key, **kwargs):
-        if key in kwargs: kwargs.pop(key)
-        return kwargs
-
-    def _clean_kwargs(self, **kwargs: Any) -> Any:
-        kwargs = self._clean_remove_kwargs('use_topk', **kwargs)
-        kwargs = self._clean_remove_kwargs('kval', **kwargs)
-        kwargs = self._clean_remove_kwargs('target', **kwargs)
-        kwargs = self._clean_remove_kwargs('show_table', **kwargs)
-        kwargs = self._clean_remove_kwargs('feature_columns', **kwargs)
-        kwargs = self._clean_remove_kwargs('target_columns', **kwargs)
-        return kwargs
 
 
 class TabularUnsupervisedPredictor(Predictor):
@@ -82,15 +57,15 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
 
     def _predict(self, feature: torch.Tensor):
         prediction = None
-        if len(feature):
-            feature.to(self.device)
+        if len(feature) > 0:
+            feature = feature.to(self.device)
             self.model = self.model.to(self.device)
             self.model.eval()
             with torch.no_grad():
                 prediction = self.model(feature)
         return prediction
 
-    def _post_predict(self, prediction: torch.Tensor, use_topk: bool = False, kval: int = 5) -> Union[None, Tuple]:
+    def _post_predict(self, prediction: torch.Tensor, use_topk: bool = False, kval: int = 5) -> Union[Any, Tuple]:
         is_clean = self._post_check(prediction)
         if is_clean:
             if not use_topk:
@@ -140,22 +115,20 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
         return False
 
     @staticmethod
-    def _build_topk_series( predict, data_dict, target_columns, kval):
+    def _build_topk_series(predict, data_dict, target_columns, kval):
         for i in range(kval):
             percent = predict[0]
             classes = predict[2]
             data = []
             for cls, prc in zip(classes, percent):
-                if len(cls)==1:
-                    data.append(f"{cls[0]} ({prc[0]*100:.4f}%)")
+                if len(cls) == 1:
+                    data.append(f"{cls[0]} ({prc[0] * 100:.4f}%)")
                 else:
-                    data.append(f"{cls[i]} ({prc[i]*100:.4f}%)")
+                    data.append(f"{cls[i]} ({prc[i] * 100:.4f}%)")
             data_dict.update({target_columns[0] + "_predict_top" + str(i + 1): data})
 
-    def _show_as_dataframe(self, feature: torch.Tensor, predict: torch.Tensor,
-                           target: torch.Tensor, kval,  **kwargs: Any) -> pd.DataFrame:
-        feature_columns = kwargs.get("feature_columns", [])
-        target_columns = kwargs.get("target_columns", [])
+    def _show_as_dataframe(self, feature: torch.Tensor, predict: torch.Tensor, target: torch.Tensor, kval,
+                           feature_columns=[], target_columns=[]) -> pd.DataFrame:
         if target.dim() < 2:
             tdn = 2 - target.dim()
             for i in range(tdn):
@@ -175,26 +148,22 @@ class TabularClassifierPredictor(TabularSupervisedPredictor):
             data_dict.update({target_columns[0] + "_predict": predict[1]})
 
         df = pd.DataFrame(data_dict)
+        # df = data_dict
         return df
 
-    def predict(self, *args: Any, **kwargs: Any):
-        use_topk, kval = kwargs.get("use_topk", False), kwargs.get("kval", 1)
-        target = kwargs.get("target", None)
-        show_table = kwargs.get("show_table", False)
-        feature_columns = kwargs.get("feature_columns", None)
-        target_columns = kwargs.get("target_columns", None)
-        kwargs = self._clean_kwargs(**kwargs)
-
-        feature = self._pre_predict(*args, **kwargs)
-        prediction = self._predict(feature)
+    def predict(self, feature: Union[str, pd.DataFrame, torch.Tensor, np.ndarray, List] = None,
+                target: Any = None, transform=None, use_topk: bool = False, kval: int = 1,
+                show_table: bool = False):
+        if transform: self.transform = transform
+        feat = self._pre_predict(feature)
+        prediction = self._predict(feat)
         result = self._post_predict(prediction, use_topk=use_topk, kval=kval)
         if show_table:
-            return self._show_as_dataframe(feature, result, target,
-                                           feature_columns=feature_columns,
-                                           target_columns=target_columns,
-                                           kval=kval)
-        else:
-            return result
+            feat = self._pre_predict(feature, use_transform=False)
+            return self._show_as_dataframe(feat, result, target, kval=kval,
+                                           feature_columns=self.data_state.feature_columns,
+                                           target_columns=self.data_state.target_columns)
+        return result
 
 
 class TabularRegressorPredictor(TabularSupervisedPredictor):
@@ -222,14 +191,14 @@ class TabularRegressorPredictor(TabularSupervisedPredictor):
         return True
 
     @staticmethod
-    def _show_as_dataframe(feature: torch.Tensor, predict: torch.Tensor,
-                           target: torch.Tensor, **kwargs: Any) -> pd.DataFrame:
-        feature_columns = kwargs.get("feature_columns", [])
-        target_columns = kwargs.get("target_columns", [])
-        if target.dim() < 2:
-            tdn = 2 - target.dim()
-            for i in range(tdn):
-                target = target.unsqueeze(dim=0)
+    def _show_as_dataframe(feature: torch.Tensor, predict: torch.Tensor, target: torch.Tensor,
+                           feature_columns=[], target_columns=[]) -> pd.DataFrame:
+
+        # print(len(feature), len(target))
+        # if target.dim() < 2:
+        #     tdn = 2 - target.dim()
+        #     for i in range(tdn):
+        #         target = target.unsqueeze(dim=0)
 
         data_dict = {}
         for idx, col in enumerate(feature_columns):
@@ -237,30 +206,27 @@ class TabularRegressorPredictor(TabularSupervisedPredictor):
 
         data_dict.update({target_columns[0] + "_predict": predict[:, 0]})
         if target is not None:
-            data_dict.update({target_columns[0] + "_truth": target[:, 0]})
+            data_dict.update({target_columns[0] + "_truth": target.squeeze()})
+
+        # print(len(feature), len(predict), len(target))
 
         df = pd.DataFrame(data_dict)
+        # df = data_dict
         return df
 
-    def predict(self, *args: Any, **kwargs: Any):
-        target = kwargs.get("target", None)
-        show_table = kwargs.get("show_table", False)
-        feature_columns = kwargs.get("feature_columns", None)
-        target_columns = kwargs.get("target_columns", None)
-        kwargs = self._clean_kwargs(**kwargs)
-
-        feature = self._pre_predict(*args, **kwargs)
-        prediction = self._predict(feature)
+    def predict(self, feature, target=None, show_table=False, transform=None):
+        if transform: self.transform = transform
+        feat = self._pre_predict(feature)
+        prediction = self._predict(feat)
         result = self._post_predict(prediction)
         if show_table:
-            return self._show_as_dataframe(feature, result, target,
-                                           feature_columns=feature_columns,
-                                           target_columns=target_columns)
+            feat = self._pre_predict(feature, use_transform=False)
+            return self._show_as_dataframe(feat, result, target,
+                                           feature_columns=self.data_state.feature_columns,
+                                           target_columns=self.data_state.target_columns)
         else:
             return result
 
 
 if __name__ == "__main__":
     ...
-
-

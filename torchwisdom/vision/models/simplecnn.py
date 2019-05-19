@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class SimpleCNN(nn.Module):
-    def __init__(self, in_chan=3, num_classes=3, input_size=(224,224), use_sigmoid=False):
+    def __init__(self, in_chan=3, num_classes=3, input_size=(64, 64), use_sigmoid=False):
         super(SimpleCNN, self).__init__()
         self.input_size = input_size
         self.in_chan = in_chan
@@ -39,7 +39,7 @@ class SimpleCNN(nn.Module):
 
 
 if __name__ == '__main__':
-    x = torch.randn(1, 3, 224, 224)
-    model = SimpleCNN(3, 3)
+    x = torch.randn(1, 3, 64, 64)
+    model = SimpleCNN(3, 3, input_size=(64, 64))
     out = model(x)
     print(out.shape)

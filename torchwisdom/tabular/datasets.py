@@ -1,29 +1,25 @@
-import torch
-from torch.utils import data
-import numpy as np
-import pandas as pd
-from torchwisdom.tabular import transforms
-
-from pathlib import Path
-import os
-from typing import *
-from ..tabular import transforms as tab_transforms
-import torchvision.transforms as transforms
 import random
-from ..core.nn import functional as N
+from pathlib import Path
+from typing import *
 
+import pandas as pd
+import torch
+import torchvision.transforms as transforms
+from torch.utils.data import dataset
+from ..tabular import transforms as tab_transforms
 
 __all__ = ['CSVDataset']
 
 
-class CSVDataset(data.dataset.Dataset):
-    def __init__(self, file, target_columns: Union[str, List], feature_columns: list = None,
+class CSVDataset(dataset.Dataset):
+    def __init__(self, file: str, target_columns: Union[str, List], feature_columns: list = None,
                  transform: Any = None, target_transform: Any = None,
-                 **kwargs):
+                 target_dtype: str = 'categorical', drop_columns: List = [], valid_size: float = 0.0,
+                 mode: str = 'train', use_normalization: bool = False, normalization_mode: str = 'minmax'):
         super(CSVDataset, self).__init__()
         self.file = Path(file)
-        self.target_dtype = kwargs.get("target_dtype", "categorical")
-        self.drop_columns = kwargs.get("drop_columns", [])
+        self.target_dtype = target_dtype
+        self.drop_columns = drop_columns
         self.data_frame = self._file_check()
         self.train_frame = None
         self.valid_frame = None
@@ -31,18 +27,16 @@ class CSVDataset(data.dataset.Dataset):
         self.feature_columns = feature_columns
         self.transform: Callable = transform
         self.target_transform: Callable = target_transform
-        self.valid_size = kwargs.get("valid_size", 0)
-        self.mode = kwargs.get("mode", "train")
-        self.use_normalization = kwargs.get("use_normalization", False)
-        self.normalization_mode = kwargs.get('normalization_mode', 'minmax')
+        self.valid_size = valid_size
+        self.mode = mode
+        self.use_normalization = use_normalization
+        self.normalization_mode = normalization_mode
         self._build_classes()
         self._dataset_split()
         self._build_column()
         self._build_feature_stats()
-        self._normalize_feature()
         self._build_default_transform()
         self._build_frame()
-
 
     def _file_check(self):
         if not self.file.exists():
@@ -59,32 +53,10 @@ class CSVDataset(data.dataset.Dataset):
         self.feature_stats = {}
         frame = self.data_frame
         for col in self.feature_columns:
-            xmin = frame[col].min()
-            xmax = frame[col].max()
-            xmean = frame[col].mean()
-            xstd = frame[col].std()
-            self.feature_stats.update({col: {'min': xmin, 'max': xmax, 'mean': xmean, 'std': xstd}})
-
-    def _normalize_feature(self):
-        if self.use_normalization:
-            frame = self._proper_frame()
-            for col in self.feature_columns:
-                stats = self.feature_stats[col]
-                if self.normalization_mode == 'minmax':
-                    frame_result = N.normalization(self.data_frame[col].values, stats['min'], stats['max'])
-                    train_result = N.normalization(self.train_frame[col].values, stats['min'], stats['max'])
-                    valid_result = N.normalization(self.valid_frame[col].values, stats['min'], stats['max'])
-                else:
-                    frame_result = N.standardization(self.data_frame[col].values, stats['mean'], stats['std'])
-                    train_result = N.standardization(self.train_frame[col].values, stats['mean'], stats['std'])
-                    valid_result = N.standardization(self.valid_frame[col].values, stats['mean'], stats['std'])
-
-                self.data_frame[col] = frame_result
-                self.train_frame[col] = train_result
-                self.valid_frame[col] = valid_result
-
-
-
+            self.feature_stats.update({col: {
+                'min': frame[col].min(), 'max': frame[col].max(),
+                'mean': frame[col].mean(), 'std': frame[col].std()
+            }})
 
     def _build_classes(self):
         if self.target_dtype == 'categorical':
@@ -112,12 +84,6 @@ class CSVDataset(data.dataset.Dataset):
                 valid_index += random.sample(list_index, size)
             train_index = list(set(list(self.data_frame.index)) - set(valid_index))
             train_index, valid_index = sorted(train_index), sorted(valid_index)
-
-            self.valid_frame = self.data_frame.iloc[valid_index]
-            self.valid_frame.index = pd.RangeIndex(len(self.valid_frame.index))
-
-            self.train_frame = self.data_frame.iloc[train_index]
-            self.train_frame.index = pd.RangeIndex(len(self.train_frame.index))
         else:
             list_index = list(self.data_frame.index)
             size = int(self.valid_size * len(list_index))
@@ -125,11 +91,11 @@ class CSVDataset(data.dataset.Dataset):
             train_index = list(set(list(self.data_frame.index)) - set(valid_index))
             train_index, valid_index = sorted(train_index), sorted(valid_index)
 
-            self.valid_frame = self.data_frame.iloc[valid_index]
-            self.valid_frame.index = pd.RangeIndex(len(self.valid_frame.index))
+        self.valid_frame = self.data_frame.iloc[valid_index]
+        self.valid_frame.index = pd.RangeIndex(len(self.valid_frame.index))
 
-            self.train_frame = self.data_frame.iloc[train_index]
-            self.train_frame.index = pd.RangeIndex(len(self.train_frame.index))
+        self.train_frame = self.data_frame.iloc[train_index]
+        self.train_frame.index = pd.RangeIndex(len(self.train_frame.index))
 
     def _proper_frame(self) -> pd.DataFrame:
         frame = self.train_frame
@@ -168,15 +134,23 @@ class CSVDataset(data.dataset.Dataset):
         self.feature_frame = frame[self.feature_columns]
 
     def _build_default_transform(self):
+        normalize = tab_transforms.Normalize(self.feature_columns, self.feature_stats, self.normalization_mode)
         if not self.transform:
-            self.transform = transforms.Compose([
-                tab_transforms.NumpyToTensor(),
-                tab_transforms.ToFloatTensor()
-            ])
+            if self.use_normalization:
+                self.transform = transforms.Compose([
+                    tab_transforms.NumpyToTensor(),
+                    tab_transforms.ToFloatTensor(),
+                    normalize
+                ])
+            else:
+                self.transform = transforms.Compose([
+                    tab_transforms.NumpyToTensor(),
+                    tab_transforms.ToFloatTensor(),
+                ])
 
         if not self.target_transform:
             if self.target_dtype == 'categorical':
-                self.target_transform =  transforms.Compose([
+                self.target_transform = transforms.Compose([
                     tab_transforms.NumpyToTensor(),
                     tab_transforms.ToLongTensor()
                 ])
@@ -188,17 +162,49 @@ class CSVDataset(data.dataset.Dataset):
 
     def __getitem__(self, idx):
         feature = self.feature_frame.iloc[idx]
-        feature = np.array(list(feature))
-        feature = self.transform(feature)
+        feature = feature.values
 
         target = self.target_frame.iloc[idx]
-        target = np.array(list(target))
-        target = self.target_transform(target)
+        target = target.values
+
+        if self.transform:
+            feature = self.transform(feature)
+
+        if self.target_transform:
+            target = self.target_transform(target)
+
         if self.target_dtype == 'categorical':
             target = target.argmax(dim=0)
+
+        return feature, target
+
+    def sample(self, num=10, use_transform=False, to_tensor=True, shuffle=False):
+        if not shuffle: random.seed(1261)
+
+        len_list = list(range(len(self.feature_frame.values)))
+        sample_idx = random.sample(len_list, num)
+
+        feature = self.feature_frame.iloc[sample_idx]
+        feature.index = pd.RangeIndex(len(feature.index))
+        feature = feature.values
+
+        target = self.target_frame.iloc[sample_idx]
+        target.index = pd.RangeIndex(len(target.index))
+        target = target.values
+
+        if use_transform:
+            feature = self.transform(feature)
+            target = self.target_transform(target)
+            if self.target_dtype == 'categorical':
+                target = target.argmax(dim=1)
+
+        if not use_transform and to_tensor:
+            feature = torch.FloatTensor(feature)
+            target = torch.Tensor(target)
+            if self.target_dtype == 'categorical':
+                target = target.argmax(dim=1)
+
         return feature, target
 
     def __len__(self):
         return len(self._proper_frame())
-
-

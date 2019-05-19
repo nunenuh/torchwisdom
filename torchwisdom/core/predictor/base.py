@@ -9,18 +9,23 @@ from .data import *
 #            '']
 
 
-
 class _Predictor(object):
     def __init__(self, file, **kwargs):
         self.file = file
         self.kwargs = kwargs
 
     def _file_check(self, file): return NotImplementedError()
+
     def _pre_check(self, data): return NotImplementedError()
+
     def _pre_predict(self, data): return NotImplementedError()
+
     def _predict(self, data): return NotImplementedError()
+
     def _post_check(self, data): return NotImplementedError
+
     def _post_predict(self, data): return NotImplementedError()
+
     def predict(self, data): return NotImplementedError()
 
 
@@ -58,8 +63,9 @@ class Predictor(_Predictor):
         setattr_parser(self.model_state, self.file.get("model", {}))
         setattr_parser(self.meta_state, self.file.get("meta", {}))
 
+
 class VisionSupervisePredictor(Predictor):
-    def __init__(self,  file: Union[str, Dict], **kwargs: Any):
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
         super(VisionSupervisePredictor, self).__init__(file, **kwargs)
         self.model = self.model_state.class_obj
         self.transform = self.data_state.transform
@@ -68,17 +74,19 @@ class VisionSupervisePredictor(Predictor):
 class VisionSemiSupervisePredictor(Predictor):
     def __init__(self, file: Union[str, Dict], **kwargs: Any):
         super(VisionSemiSupervisePredictor, self).__init__(file, **kwargs)
+        self.model = self.model_state.class_obj
+        self.transform = self.data_state.transform
 
 
 class TextSupervisedPredictor(Predictor):
     def __init__(self, file: Union[str, Dict], **kwargs: Any):
         super(TextSupervisedPredictor, self).__init__(file, **kwargs)
-        
+
 
 class TextUnsupervisedPredictor(Predictor):
     def __init__(self, file: Union[str, Dict], **kwargs: Any):
         super(TextUnsupervisedPredictor, self).__init__(file, **kwargs)
-        
+
 
 class AudioSupervisedPredictor(Predictor):
     def __init__(self, file: Union[str, Dict], **kwargs: Any):
@@ -88,5 +96,3 @@ class AudioSupervisedPredictor(Predictor):
 class AudioUnsupervisedPredictor(Predictor):
     def __init__(self, file: Union[str, Dict], **kwargs: Any):
         super(AudioUnsupervisedPredictor, self).__init__(file, **kwargs)
-
-

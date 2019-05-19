@@ -1,2 +1,2 @@
 from .datasets import *
-from .collector import *
+from .capsule import *

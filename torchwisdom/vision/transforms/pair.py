@@ -1,12 +1,13 @@
 import random
 import PIL
+import torch
 from PIL import Image
 import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 
 __all__ = ['PairCompose', 'PairResize', 'PairCenterCrop', 'PairColorJitter', 'PairPad',
            'PairRandomAffine', 'PairRandomApply', 'PairRandomCrop', 'PairRandomHorizontalFlip',
-           'PairRandomResizedCrop', 'PairRandomRotation', 'PairRandomVerticalFlip','PairGrayscale',
+           'PairRandomResizedCrop', 'PairRandomRotation', 'PairRandomVerticalFlip', 'PairGrayscale',
            'PairToTensor']
 
 _pil_interpolation_to_str = {
@@ -18,9 +19,11 @@ _pil_interpolation_to_str = {
     Image.BOX: 'PIL.Image.BOX',
 }
 
+
 class PairCompose(transforms.Compose):
-    def __init__(self, transforms):
-        super(PairCompose, self).__init__(transforms)
+    def __init__(self, transform):
+        super(PairCompose, self).__init__(transform)
+        self.transforms = transform
 
     def __call__(self, img1, img2):
         for t in self.transforms:
@@ -40,7 +43,7 @@ class PairToTensor(transforms.ToTensor):
 
 class PairResize(transforms.Resize):
     def __init__(self, size, interpolation=Image.BILINEAR):
-       super(PairResize, self).__init__(size=size, interpolation=interpolation)
+        super(PairResize, self).__init__(size=size, interpolation=interpolation)
 
     def __call__(self, img1, img2):
         img1 = F.resize(img1, self.size, self.interpolation)
@@ -69,7 +72,7 @@ class PairPad(transforms.Pad):
 
 
 class PairRandomApply(transforms.RandomApply):
-    def __init__(self,  transforms, p=0.5):
+    def __init__(self, transforms, p=0.5):
         super(PairRandomApply, self).__init__(transforms, p)
 
     def __call__(self, img1, img2):
@@ -122,6 +125,7 @@ class PairRandomHorizontalFlip(transforms.RandomHorizontalFlip):
             img2 = F.hflip(img2)
         return img1, img2
 
+
 class PairRandomVerticalFlip(transforms.RandomVerticalFlip):
     def __init__(self, p=0.5):
         super(PairRandomVerticalFlip, self).__init__(p)
@@ -146,6 +150,7 @@ class PairRandomResizedCrop(transforms.RandomResizedCrop):
 
         return img1, img2
 
+
 class PairRandomRotation(transforms.RandomRotation):
     def __init__(self, degrees, resample=False, expand=False, center=None):
         super(PairRandomRotation, self).__init__(degrees, resample, expand, center)
@@ -157,9 +162,10 @@ class PairRandomRotation(transforms.RandomRotation):
 
         return img1, img2
 
+
 class PairRandomAffine(transforms.RandomAffine):
     def __init__(self, degrees, translate=None, scale=None, shear=None, resample=False, fillcolor=0):
-        super(PairRandomAffine, self).__init__(degrees,translate,scale,shear,resample,fillcolor)
+        super(PairRandomAffine, self).__init__(degrees, translate, scale, shear, resample, fillcolor)
 
     def __call__(self, img1, img2):
         ret1 = self.get_params(self.degrees, self.translate, self.scale, self.shear, img1.size)
@@ -173,7 +179,7 @@ class PairRandomAffine(transforms.RandomAffine):
 
 class PairColorJitter(transforms.ColorJitter):
     def __init__(self, brightness=0, contrast=0, saturation=0, hue=0):
-        super(PairColorJitter, self).__init__(brightness,contrast,saturation,hue)
+        super(PairColorJitter, self).__init__(brightness, contrast, saturation, hue)
 
     def __call__(self, img1, img2):
         transform = self.get_params(self.brightness, self.contrast,
@@ -189,3 +195,18 @@ class PairGrayscale(transforms.Grayscale):
         img1 = F.to_grayscale(img1, num_output_channels=self.num_output_channels)
         img2 = F.to_grayscale(img2, num_output_channels=self.num_output_channels)
         return img1, img2
+
+
+class PairNormalize(transforms.Normalize):
+    def __init__(self, mean, std, inplace=False):
+        super(PairNormalize, self).__init__(mean, std, inplace)
+
+    def __call__(self, tensor1, tensor2):
+        t1, t2 = self._normalize(tensor1), self._normalize(tensor2)
+        return t1, t2
+
+    def _normalize(self, tensor):
+        if tensor.size()[0] == 1:
+            mean, std = [torch.mean(torch.Tensor(self.mean))], [torch.mean(torch.Tensor(self.std))]
+            return F.normalize(tensor, mean, std, self.inplace)
+        return F.normalize(tensor, self.mean, self.std, self.inplace)

@@ -2,7 +2,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 from .helpers import *
-from ..data import DatasetCollector
+from ..data import DataCapsule
 from ..optim.wrapper import *
 # from ..exporter import ExporterBuilder
 
@@ -11,7 +11,7 @@ __all__ = ['Trainer']
 
 
 class Trainer(object):
-    def __init__(self, data: DatasetCollector, model: nn.Module,
+    def __init__(self, data: DataCapsule, model: nn.Module,
                  criterion: nn.Module = None, optimizer: optim.Optimizer = None,
                  metrics: List = [], callbacks: List = None):
         self.data = data

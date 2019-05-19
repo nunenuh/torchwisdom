@@ -1,1 +1,1 @@
-from .collector import *
+from .capsule import *

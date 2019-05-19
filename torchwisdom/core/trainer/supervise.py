@@ -1,28 +1,26 @@
 import torch
 import torch.nn as nn
+import torch.optim as optim
 from fastprogress import progress_bar, master_bar
 from torch.nn.modules.module import Module
 from torch.optim import Optimizer
 
 from torchwisdom.core.optim.wrapper import OptimizerWrapper
-from torchwisdom.core.data import DatasetCollector
+from torchwisdom.core.data import DataCapsule
 from .base import Trainer
 from .helpers import *
 from ..exporter import ExporterBuilder
-
 
 __all__ = ['SuperviseTrainer', 'ClassifierTrainer', 'RegressorTrainer']
 
 
 class SuperviseTrainer(Trainer):
-    def __init__(self, data: DatasetCollector, model: Module,
+    def __init__(self, data: DataCapsule, model: Module,
                  criterion: Module = None, optimizer: Optimizer = None,
                  metrics: List = [], callbacks: List = None):
         super(SuperviseTrainer, self).__init__(data, model, criterion, optimizer, metrics, callbacks)
 
-        self.bunch = self.data.bunch()
-
-    def compile(self, optimizer, criterion):
+    def compile(self, optimizer: optim.Optimizer, criterion: nn.Module):
         self.optimizer = optimizer
         self.criterion = criterion
 
@@ -43,8 +41,6 @@ class SuperviseTrainer(Trainer):
               f"metric value\t: {last_best}\n"
               f"metric mode\t: {best_mode}\n"
               f"epoch taken\t: {epoch_saved}\n")
-
-
 
         lr = trainer_state.get("lr")
         self._build_optimizer(lr)
@@ -83,10 +79,10 @@ class SuperviseTrainer(Trainer):
         self._backward(loss)
         self.handler.on_train_backward_end()
 
-    def _train(self, epoch, mbar: master_bar):
-        self.handler.on_train_begin( master_bar=mbar)
+    def _train(self, epoch: int, mbar: master_bar):
+        self.handler.on_train_begin(master_bar=mbar)
         self.model.train()
-        train_loader = self.bunch['train']
+        train_loader = self.data.train_loader
         trainbar = progress_bar(train_loader, parent=mbar)
         for idx, (feature, target) in enumerate(trainbar):
             self.handler.on_train_batch_begin(batch_curr=idx, master_bar=mbar)
@@ -106,10 +102,10 @@ class SuperviseTrainer(Trainer):
         self.handler.on_validate_forward_end(loss=loss, y_pred=pred, y_true=target)
         return loss
 
-    def _validate(self, epoch, mbar: master_bar):
+    def _validate(self, epoch: int, mbar: master_bar):
         self.handler.on_validate_begin(master_bar=mbar)
         self.model.eval()
-        valid_loader = self.bunch['valid']
+        valid_loader = self.data.valid_loader
         progbar = progress_bar(valid_loader, parent=mbar)
         with torch.no_grad():
             for idx, (feature, target) in enumerate(progbar):
@@ -118,10 +114,10 @@ class SuperviseTrainer(Trainer):
                 target = target.to(device=self.device)
 
                 self._validate_forward(feature, target)
-                self.handler.on_validate_batch_end( master_bar=mbar)
-        self.handler.on_validate_end(epoch=epoch,  master_bar=mbar)
+                self.handler.on_validate_batch_end(master_bar=mbar)
+        self.handler.on_validate_end(epoch=epoch, master_bar=mbar)
 
-    def fit(self, epoch_num, lr=0.01, wd=0, verbose=False, callbacks=None, **kwargs):
+    def fit(self, epoch_num: int, lr: float = 0.01, wd=0, verbose=False, callbacks=None, **kwargs):
         self._build_optimizer(lr, weight_decay=wd, **kwargs)
         self._build_state_manager()
         self._build_callback_handler()  # CallbackHandler need to be the last to build
@@ -151,7 +147,6 @@ class SuperviseTrainer(Trainer):
 
         plt.switch_backend('module://ipykernel.pylab.backend_inline')
 
-
     def resume(self, id: str = None, from_last: bool = True, is_best=False, **kwargs):
         self._resume_load(id, from_last, is_best=is_best)
 
@@ -160,9 +155,9 @@ class SuperviseTrainer(Trainer):
         epoch_curr = trainer_state.get("epoch").get("curr")
         epoch_num = trainer_state.get("epoch").get("num")
         self._build_optimizer(lr)
-        self._build_callback_handler_resume()# CallbackHandler need to be the last to build
+        self._build_callback_handler_resume()  # CallbackHandler need to be the last to build
 
-        mbar = master_bar(range(epoch_curr-1, epoch_num))
+        mbar = master_bar(range(epoch_curr - 1, epoch_num))
         self.handler.on_resume_begin(epoch_num=epoch_num, master_bar=mbar)
         for epoch in mbar:
             self.handler.on_epoch_begin(epoch=epoch, master_bar=mbar)
@@ -172,20 +167,16 @@ class SuperviseTrainer(Trainer):
             self.handler.on_epoch_end(epoch=epoch, master_bar=mbar)
         self.handler.on_resume_end(epoch=epoch, master_bar=mbar)
 
-    def export(self, path: str, **kwargs: Any):
-        self.exporter = ExporterBuilder(self)
-        self.exporter.export(path, **kwargs)
-
 
 class ClassifierTrainer(SuperviseTrainer):
-    def __init__(self, data: DatasetCollector, model: Module,
+    def __init__(self, data: DataCapsule, model: Module,
                  criterion: Module = None, optimizer: Optimizer = None,
                  metrics: List = [], callbacks: List = None):
         super(ClassifierTrainer, self).__init__(data, model, criterion, optimizer, metrics, callbacks)
 
 
 class RegressorTrainer(SuperviseTrainer):
-    def __init__(self, data: DatasetCollector, model: Module,
+    def __init__(self, data: DataCapsule, model: Module,
                  criterion: Module = None, optimizer: Optimizer = None,
                  metrics: List = [], callbacks: List = None):
         super(RegressorTrainer, self).__init__(data, model, criterion, optimizer, metrics, callbacks)

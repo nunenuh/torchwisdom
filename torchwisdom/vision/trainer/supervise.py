@@ -3,34 +3,25 @@ import torch.nn as nn
 from torch.optim.optimizer import Optimizer
 
 from ...core.callback import *
-from ...core.data import DatasetCollector
+from ...core.data import DataCapsule
+from ..data.capsule import *
 from ...core.trainer import ClassifierTrainer
 from ...core.exporter import *
 from ...vision.predictor import ConvClassifierPredictor
 
+__all__ = ['ConvClassifierTrainer']
 
 
-__all__ = ['ConvTrainer']
-
-
-class ConvTrainer(ClassifierTrainer):
-    def __init__(self, data: DatasetCollector, model: nn.Module,
+class ConvClassifierTrainer(ClassifierTrainer):
+    def __init__(self, data: ImageClassfierDataCapsule, model: nn.Module,
                  criterion: nn.Module = None, optimizer: Optimizer = None,
                  metrics: Collection[Callback] = None, callbacks: Collection[Callback] = None):
-        super(ConvTrainer, self).__init__(data=data, model=model,
-                                          criterion=criterion, optimizer=optimizer,
-                                          metrics=metrics, callbacks=callbacks)
-
+        super(ConvClassifierTrainer, self).__init__(data=data, model=model,
+                                                    criterion=criterion, optimizer=optimizer,
+                                                    metrics=metrics, callbacks=callbacks)
 
         self.predictor: ConvClassifierPredictor = None
         self._set_device()
-        # self._build_predictor()
-
-    def _build_predictor(self):
-        if self.exporter is None:
-            self.exporter = ExporterBuilder(self)
-        self.exporter.build_state()
-        self.predictor: ConvClassifierPredictor = ConvClassifierPredictor(self.exporter.state)
 
 
     def _data_loss_check_clean(self, pred, target):
@@ -49,6 +40,7 @@ class ConvTrainer(ClassifierTrainer):
         return loss
 
     def _forward(self, feature):
+        # print(feature.shape)
         pred = self.model(feature)
         return pred
 
@@ -72,9 +64,17 @@ class ConvTrainer(ClassifierTrainer):
         for param in params:
             param.requires_grad = True
 
-    def predict(self, data: Union[AnyStr, torch.Tensor], use_topk=False, kval=5, transform=None):
-        if transform:
-            self.predictor.transform = transform
-        self._build_predictor()
-        result = self.predictor.predict(data, use_topk=use_topk, kval=kval)
+    def _init_predictor(self):
+        self.exporter = VisionExporter(self)
+        self.exporter.init_state()
+        self.predictor: ConvClassifierPredictor = ConvClassifierPredictor(self.exporter.state)
+
+    def predict(self, feature: Union[AnyStr, torch.Tensor], use_topk=False, kval=5, transform=None):
+        if transform: self.predictor.transform = transform
+        self._init_predictor()
+        result = self.predictor.predict(feature, use_topk=use_topk, kval=kval)
         return result
+
+    def export(self, path: str):
+        self.exporter = VisionExporter(self)
+        self.exporter.export(path)

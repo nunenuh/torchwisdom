@@ -4,16 +4,22 @@ import pathlib
 import torch.utils.data as data
 import PIL
 import PIL.Image
-from torchwisdom.vision.transforms import transforms as ptransforms
+from torchwisdom.vision.transforms import pair as pair_transforms
+import torchvision.transforms as transforms
 from torchvision.datasets import ImageFolder
+from typing import *
+
 
 class SiamesePairDataset(data.Dataset):
-    def __init__(self, root, ext='jpg', transform=None, pair_transform=None, target_transform=None):
+    def __init__(self, root, ext='jpg',
+                 transform: transforms.Compose = None,
+                 pair_transform: pair_transforms.PairCompose = None,
+                 target_transform: transforms.Compose = None):
         super(SiamesePairDataset, self).__init__()
-        self.transform = transform
-        self.pair_transform = pair_transform
-        self.target_transform = target_transform
-        self.root = root
+        self.transform: transforms.Compose = transform
+        self.pair_transform: pair_transforms.PairCompose = pair_transform
+        self.target_transform: transforms.Compose = target_transform
+        self.root: str = root
 
         self.base_path = pathlib.Path(root)
         self.files = sorted(list(self.base_path.glob("*/*." + ext)))
@@ -96,7 +102,7 @@ class SiamesePairDataset(data.Dataset):
         len_spair = self._len_similar_pair()
         for idx, (kp, kvo) in enumerate(pair_dircomp):
             val_pri = fmap[kp]
-            if len(val_pri)>=4:
+            if len(val_pri) >= 4:
                 num_sample = len(val_pri) // 4
             else:
                 num_sample = len(val_pri)
@@ -111,7 +117,7 @@ class SiamesePairDataset(data.Dataset):
                     for vo in vov:
                         fo = os.path.join(ko, vo)
                         pair.append(((fp, fo), 1))
-                    if len(pair)>num_sample:
+                    if len(pair) > num_sample:
                         mout = random.sample(pair, num_sample)
                     else:
                         mout = pair
@@ -125,8 +131,7 @@ class SiamesePairDataset(data.Dataset):
                 for v in va:
                     tmp_val.append(v)
 
-
-            if len(tmp_val)>num_sample:
+            if len(tmp_val) > num_sample:
                 pair_sampled[key] = random.sample(tmp_val, num_sample)
             else:
                 pair_sampled[key] = tmp_val
@@ -158,48 +163,91 @@ class SiamesePairDataset(data.Dataset):
 
 
 class AutoEncoderDataset(data.Dataset):
-    def __init__(self, root, feature_dirname=None, target_dirname=None,
-                 feature_transform=None, pair_transform=None, target_transform=None, **kwargs):
+    def __init__(self, root, feature_dir: str = None, target_dir: str = None,
+                 feature_transform: transforms.Compose = None,
+                 pair_transform: pair_transforms.PairCompose = None,
+                 target_transform: transforms.Compose = None,
+                 limit_size: Union[int, float] = 0, limit_type: Union[int, float] = int,
+                 split_dataset: bool = False, mode: str = 'train', valid_size: float = 0.2):
         super(AutoEncoderDataset, self).__init__()
         self.root = pathlib.Path(root)
-        self.feature_dirname = feature_dirname
-        self.target_dirname = target_dirname
-        self.feature_path: pathlib.Path = None
-        self.target_path: pathlib.Path = None
-        self.feature_files = None
-        self.target_files = None
+        self.feature_dir = feature_dir
+        self.target_dir = target_dir
+        self.split_dataset = split_dataset
+        self.mode = mode
+        self.valid_size = valid_size
+
+        self.feature_path = self.root.joinpath("feature")
+        if feature_dir is not None:
+            self.feature_path: pathlib.Path = self.root.joinpath(feature_dir)
+
+        self.target_path = self.root.joinpath("target")
+        if target_dir is not None:
+            self.target_path: pathlib.Path = self.root.joinpath(target_dir)
+
         self.feature_transform = feature_transform
         self.pair_transform = pair_transform
         self.target_transform = target_transform
-        self.kwargs = kwargs
-        self._build_path()
+        self.limit_size = limit_size
+        self.limit_type = limit_type
+
+        self.feature_files = None
+        self.target_files = None
+        self.train_feature_files = None
+        self.train_target_files = None
+        self.valid_feature_files = None
+        self.valid_target_files = None
+
         self._build_files()
         self._build_usage()
-
-    def _build_usage(self):
-        size = self.kwargs.get("size", 1)
-        total = int(self.__len__() * size)
-        self.feature_files = self.feature_files[0:total]
-        self.target_files = self.target_files[0:total]
-
-    def _build_path(self):
-        if self.feature_dirname is None:
-            self.feature_path: pathlib.Path = self.root.joinpath('feature')
-        else:
-            self.feature_path: pathlib.Path = self.root.joinpath(self.feature_dirname)
-
-        if self.target_dirname is None:
-            self.target_path = self.root.joinpath('target')
-        else:
-            self.target_path = self.root.joinpath(self.target_dirname)
+        if split_dataset:
+            self._split_dataset()
 
     def _build_files(self):
         self.feature_files = sorted(list(self.feature_path.glob("*")))
         self.target_files = sorted(list(self.target_path.glob("*")))
+        # print(self.feature_files)
         feat_len = len(self.feature_files)
         targ_len = len(self.target_files)
-        assert feat_len == targ_len, "Total files from feature dir and target " \
-                                     "dir is not equal, expected equal number"
+        assert feat_len == targ_len, f"Total files from feature dir and target " \
+            f"dir is not equal ({feat_len}!={targ_len}), expected equal number"
+
+    def _build_usage(self):
+        if self.limit_type == float:
+            total = int(self.__len__() * self.limit_size)
+        elif self.limit_type == int:
+            if self.limit_size == 0:
+                total = len(self.feature_files)
+            else:
+                total = self.limit_size
+        else:
+            total = self.limit_size
+        self.feature_files = self.feature_files[0:total]
+        self.target_files = self.target_files[0:total]
+
+    def _split_dataset(self):
+        random.seed(1261)
+        valid_index = []
+        size = 0
+        len_files = len(self.feature_files)
+        list_index = list(range(len_files))
+        if self.valid_size > 0:
+            size = int(self.valid_size * self.__len__())
+        valid_index += random.sample(list_index, size)
+        train_index = list(set(list_index) - set(valid_index))
+        train_index, valid_index = sorted(train_index), sorted(valid_index)
+
+        self.train_feature_files = [self.feature_files[i] for i in train_index]
+        self.train_target_files = [self.target_files[i] for i in train_index]
+        self.valid_feature_files = [self.feature_files[i] for i in valid_index]
+        self.valid_target_files = [self.target_files[i] for i in valid_index]
+
+        if self.mode == 'train':
+            self.feature_files = self.train_feature_files
+            self.target_files = self.train_target_files
+        else:
+            self.feature_files = self.valid_feature_files
+            self.target_files = self.valid_target_files
 
     def __len__(self):
         feat_len = len(list(self.feature_files))
@@ -222,8 +270,6 @@ class AutoEncoderDataset(data.Dataset):
             target = self.target_transform(target)
 
         return feature, target
-
-
 
 
 if __name__ == '__main__':

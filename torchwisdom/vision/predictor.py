@@ -5,10 +5,8 @@ from PIL import Image
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ..core.data import DatasetCollector
+from ..core.data import DataCapsule
 from ..core.predictor import VisionSupervisePredictor, VisionSemiSupervisePredictor
-
-
 
 __all__ = ['ConvClassifierPredictor', 'ConvAutoEncoderPredictor']
 
@@ -19,55 +17,55 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
         self.model = self.model_state.class_obj
         self.transform = self.data_state.transform
 
-    def _pre_check(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> bool:
-        id_data = identify_input(data)
+    def _pre_check(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> bool:
+        id_data = identify_input(feature)
         if id_data is 'string':
-            return is_file_pil_compatible(data)
+            return is_file_pil_compatible(feature)
         elif id_data is 'numpy':
-            return is_numpy_pil_compatible(data)
+            return is_numpy_pil_compatible(feature)
         elif id_data is 'pil':
-            return is_pil_verified(data)
+            return is_pil_verified(feature)
         elif id_data is 'tensor':
-            return is_tensor_image_compatible(data)
+            return is_tensor_image_compatible(feature)
         else:
             return False
 
-    def _pre_load(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> Tuple[Any, str]:
-        id_data = identify_input(data)
+    def _pre_load(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> Tuple[Any, str]:
+        id_data = identify_input(feature)
         if id_data == 'string':
-            out = Image.open(data)
+            out = Image.open(feature)
             out = out.convert("RGB")
         elif id_data == 'numpy':
-            out = Image.fromarray(data)
+            out = Image.fromarray(feature)
             out = out.convert("RGB")
         elif id_data == 'pil' or id_data == 'tensor':
-            out = data
+            out = feature
         else:
             out = None
         return out, id_data
 
-    def _pre_predict(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> torch.Tensor:
-        feature: torch.Tensor = torch.Tensor()
-        is_clean = self._pre_check(data)
+    def _pre_predict(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> torch.Tensor:
+        feat: torch.Tensor = torch.Tensor()
+        is_clean = self._pre_check(feature)
         if is_clean:
-            loaded_data, loaded_type = self._pre_load(data)
+            loaded_data, loaded_type = self._pre_load(feature)
             if type(loaded_data) != type(None):
                 if loaded_type == 'tensor':
-                    feature: torch.Tensor = loaded_data
+                    feat: torch.Tensor = loaded_data
                     if not is_tensor_batch_image(feature):
-                        feature = feature.unsqueeze(dim=0)
+                        feat = feature.unsqueeze(dim=0)
                 else:
-                    feature: torch.Tensor = self.transform(loaded_data)
-                    feature = feature.unsqueeze(dim=0)
+                    feat: torch.Tensor = self.transform(loaded_data)
+                    feat = feat.unsqueeze(dim=0)
             else:
-                if is_tensor_single_image(data):
-                    feature = data.unsqueeze(dim=0)
-        return feature
+                if is_tensor_single_image(feature):
+                    feat = feature.unsqueeze(dim=0)
+        return feat
 
     def _predict(self, feature: torch.Tensor):
         prediction = None
         if len(feature):
-            feature.to(self.device)
+            feature = feature.to(self.device)
             self.model = self.model.to(self.device)
             self.model.eval()
             with torch.no_grad():
@@ -123,9 +121,9 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
             return class_index, class_label
         return False
 
-    def predict(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor], use_topk=False, kval=5):
-        feature = self._pre_predict(data)
-        prediction = self._predict(feature)
+    def predict(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor], use_topk=False, kval=5):
+        feat = self._pre_predict(feature)
+        prediction = self._predict(feat)
         result = self._post_predict(prediction, use_topk=use_topk, kval=kval)
         return result
 
@@ -135,55 +133,55 @@ class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
         super(ConvAutoEncoderPredictor, self).__init__(file, **kwargs)
         self.model = self.model_state.class_obj
 
-    def _pre_check(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> bool:
-        id_data = identify_input(data)
+    def _pre_check(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> bool:
+        id_data = identify_input(feature)
         if id_data is 'string':
-            return is_file_pil_compatible(data)
+            return is_file_pil_compatible(feature)
         elif id_data is 'numpy':
-            return is_numpy_pil_compatible(data)
+            return is_numpy_pil_compatible(feature)
         elif id_data is 'pil':
-            return is_pil_verified(data)
+            return is_pil_verified(feature)
         elif id_data is 'tensor':
-            return is_tensor_image_compatible(data)
+            return is_tensor_image_compatible(feature)
         else:
             return False
 
-    def _pre_load(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> Tuple[Any, str]:
-        id_data = identify_input(data)
+    def _pre_load(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> Tuple[Any, str]:
+        id_data = identify_input(feature)
         if id_data == 'string':
-            out = Image.open(data)
+            out = Image.open(feature)
             out = out.convert("RGB")
         elif id_data == 'numpy':
-            out = Image.fromarray(data)
+            out = Image.fromarray(feature)
             out = out.convert("RGB")
         elif id_data == 'pil' or id_data == 'tensor':
-            out = data
+            out = feature
         else:
             out = None
         return out, id_data
 
-    def _pre_predict(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> torch.Tensor:
-        feature: torch.Tensor = torch.Tensor()
-        is_clean = self._pre_check(data)
+    def _pre_predict(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]) -> torch.Tensor:
+        feat: torch.Tensor = torch.Tensor()
+        is_clean = self._pre_check(feature)
         if is_clean:
-            loaded_data, loaded_type = self._pre_load(data)
+            loaded_data, loaded_type = self._pre_load(feature)
             if type(loaded_data) != type(None):
                 if loaded_type == 'tensor':
-                    feature: torch.Tensor = loaded_data
+                    feat: torch.Tensor = loaded_data
                     if not is_tensor_batch_image(feature):
-                        feature = feature.unsqueeze(dim=0)
+                        feat = feature.unsqueeze(dim=0)
                 else:
-                    feature: torch.Tensor = self.transform(loaded_data)
-                    feature = feature.unsqueeze(dim=0)
+                    feat: torch.Tensor = self.transform(loaded_data)
+                    feat = feat.unsqueeze(dim=0)
             else:
-                if is_tensor_single_image(data):
-                    feature = data.unsqueeze(dim=0)
-        return feature
+                if is_tensor_single_image(feature):
+                    feat = feature.unsqueeze(dim=0)
+        return feat
 
     def _predict(self, feature: torch.Tensor):
         prediction = None
         if len(feature):
-            feature.to(self.device)
+            feature = feature.to(self.device)
             self.model = self.model.to(self.device)
             self.model.eval()
             with torch.no_grad():
@@ -200,15 +198,12 @@ class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
         # check output is clean (classfier label image, not image)
         return True
 
-
-    def predict(self, data: Union[str, np.ndarray, Image.Image, torch.Tensor]):
-        feature = self._pre_predict(data)
-        prediction = self._predict(feature)
+    def predict(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor]):
+        feat = self._pre_predict(feature)
+        prediction = self._predict(feat)
         result = self._post_predict(prediction)
         return result
 
 
-
 if __name__ == "__main__":
     ...
-
