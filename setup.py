@@ -7,7 +7,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='torchwisdom',
-    version='0.0.2.dev2',
+    version='0.0.2',
     description='A High Level API for PyTorch',
     long_description=long_description,
     long_description_content_type='text/markdown',
@@ -21,12 +21,12 @@ setup(
         #   5 - Production/Stable
         'Development Status :: 3 - Alpha',
         'Intended Audience :: Developers',
-        'Topic :: Software Development :: Build Tools',
+        'Topic :: Software Development',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
     ],
-    keywords='sample setuptools development',  # Optional
+    keywords='pytorch deep learning machine learning',  # Optional
 
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
@@ -37,10 +37,10 @@ setup(
     #
     #   py_modules=["my_module"],
     #
-    packages=find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
+    packages = find_packages(exclude=['contrib', 'docs', 'tests']),  # Required
 
     python_requires='>=3.5, <=3.6',
-    install_requires=['torch', 'torchvision'],
+    install_requires=['torch', 'torchvision', 'torchtext', 'spacy', 'dataclasses'],
 
     extras_require={  # Optional
         'dev': ['check-manifest'],
