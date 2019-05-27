@@ -11,7 +11,7 @@ class ImagesMeanStdFinder(object):
     """  Class for find mean and std from image folder dataset """
     files: list
 
-    def __init__(self, root: str, ext: str = "jpg", glob_pattern="*/*."):
+    def __init__(self, root: str, ext: str = "jpg",glob_pattern="*/*."):
         """
         :param root: base path from your image directory
         :param ext: jpg, pgm, png etc
