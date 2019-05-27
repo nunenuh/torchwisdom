@@ -74,7 +74,7 @@ def autoencoder_data(path: str, feature_dir: str, target_dir: str,
                      limit_size: Union[int, float] = 0, limit_type: Union[float, int] = int,
                      train_dir: str = 'train', valid_dir: str = 'valid',
                      batch_size: int = 32, shuffle: bool = True, num_workers: int = 2,
-                     image_size: Tuple = (224, 224)):
+                     normalize=False, image_size: Tuple = (224, 224)):
     path = Path(path)
     if split_dataset:
         train_path = str(path)
@@ -86,16 +86,16 @@ def autoencoder_data(path: str, feature_dir: str, target_dir: str,
     trainset = AutoEncoderDataset(train_path, feature_dir, target_dir,
                                   split_dataset=split_dataset, valid_size=valid_size, mode='train',
                                   limit_size=limit_size, limit_type=limit_type,
-                                  pair_transform=std_train_pair_transform(image_size))
+                                  pair_transform=std_train_pair_transform(image_size, normalize))
 
     validset = AutoEncoderDataset(valid_path, feature_dir, target_dir,
                                   split_dataset=split_dataset, valid_size=valid_size, mode='valid',
                                   limit_size=limit_size, limit_type=limit_type,
-                                  pair_transform=std_valid_pair_transform(image_size))
+                                  pair_transform=std_valid_pair_transform(image_size, normalize))
 
     data_capsule = AutoEncoderDataCapsule(trainset, validset,
                                           batch_size=batch_size, shuffle=shuffle,
                                           num_workers=num_workers)
-    data_capsule.transform = imagenet_valid_transform(image_size)
+    data_capsule.transform = imagenet_valid_transform(image_size, normalize)
 
     return data_capsule
