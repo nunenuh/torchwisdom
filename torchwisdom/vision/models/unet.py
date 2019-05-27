@@ -147,13 +147,15 @@ class UNetEncoder(nn.Module):
 
 
 class UNetDecoder(nn.Module):
-    def __init__(self, in_chan, n_classes):
+    def __init__(self, in_chan, n_classes, sigmoid=False):
         super(UNetDecoder, self).__init__()
+        self.sigmoid = sigmoid
         self.up1 = UpConv(in_chan, in_chan // 4)
         self.up2 = UpConv(in_chan // 2, in_chan // 8)
         self.up3 = UpConv(in_chan // 4, in_chan // 16)
         self.up4 = UpConv(in_chan // 8, in_chan // 16)
         self.outconv = OutConv(in_chan // 16, n_classes)
+
 
     def forward(self, dc4, dc3, dc2, dc1, inc):
         up1 = self.up1(dc4, dc3)
@@ -161,18 +163,20 @@ class UNetDecoder(nn.Module):
         up3 = self.up3(up2, dc1)
         up4 = self.up4(up3, inc)
         out = self.outconv(up4)
+        if self.sigmoid:
+            out = torch.sigmoid(out)
         return out
 
 
 class UNet(nn.Module):
-    def __init__(self, in_chan, n_classes, start_feat=64):
+    def __init__(self, in_chan, n_classes, start_feat=64, sigmoid=False):
         super(UNet, self).__init__()
         self.encoder_in_chan = in_chan
         self.decoder_in_chan = start_feat * 16
         self.start_feat = start_feat
 
         self.encoder = UNetEncoder(in_chan=self.encoder_in_chan, start_feat=start_feat)
-        self.decoder = UNetDecoder(in_chan=self.decoder_in_chan, n_classes=n_classes)
+        self.decoder = UNetDecoder(in_chan=self.decoder_in_chan, n_classes=n_classes, sigmoid=sigmoid)
 
     def forward(self, x):
         dc4, dc3, dc2, dc1, inc = self.encoder(x)
@@ -222,8 +226,9 @@ class TuneableUNetEncoder(nn.Module):
 
 
 class TuneableUNetDecoder(nn.Module):
-    def __init__(self, in_chan, n_classes, deep=4):
+    def __init__(self, in_chan, n_classes, deep=4, sigmoid=False):
         super(TuneableUNetDecoder, self).__init__()
+        self.sigmoid = sigmoid
         self.in_chan = in_chan
         self.n_classes = n_classes
         self.deep = deep
@@ -232,6 +237,7 @@ class TuneableUNetDecoder(nn.Module):
 
         modules = self._make_layer()
         self.decoder = nn.Sequential(*modules)
+
 
     def _make_layer(self):
         modules = []
@@ -266,11 +272,13 @@ class TuneableUNetDecoder(nn.Module):
                 x = self.decoder[i](x, input[i + 1])
             else:
                 x = self.decoder[self.deep](x)
+        if self.sigmoid:
+            x = torch.sigmoid(x)
         return x
 
 
 class TuneableUNet(nn.Module):
-    def __init__(self, in_chan, n_classes, start_feat=32, deep=4):
+    def __init__(self, in_chan, n_classes, start_feat=32, deep=4, sigmoid=False):
         super(TuneableUNet, self).__init__()
         # self.config = config
         self.encoder = TuneableUNetEncoder(
@@ -282,7 +290,8 @@ class TuneableUNet(nn.Module):
         self.decoder = TuneableUNetDecoder(
             in_chan=self.encoder.last_chan,
             n_classes=n_classes,
-            deep=deep
+            deep=deep,
+            sigmoid=sigmoid
         )
 
     def forward(self, x):
@@ -321,8 +330,9 @@ class ResNetUNetEncoder(resnet.ResNet):
 
 
 class ResNetUNetDecoder(nn.Module):
-    def __init__(self, in_chan, expansion, n_classes):
+    def __init__(self, in_chan, expansion, n_classes, sigmoid=False):
         super(ResNetUNetDecoder, self).__init__()
+        self.sigmoid = sigmoid
         self.in_chan = in_chan
         self.expansion = expansion
         self.n_classes = n_classes
@@ -357,11 +367,13 @@ class ResNetUNetDecoder(nn.Module):
         up3 = self.up3(up2, dc1)
         up4 = self.up4(up3, inc)
         out = self.outconv(up4)
+        if self.sigmoid:
+            out = torch.sigmoid(out)
         return out
 
 
 class ResNetUNet(nn.Module):
-    def __init__(self, in_chan, n_classes, pretrained=True, version=18):
+    def __init__(self, in_chan, n_classes, pretrained=True, version=18, sigmoid=False):
         super(ResNetUNet, self).__init__()
         self.pretrained = pretrained
         self.version = version
@@ -372,7 +384,7 @@ class ResNetUNet(nn.Module):
 
         self.encoder = self._build_resnet()
         self.decoder = ResNetUNetDecoder(in_chan=self.encoder.last_chan, expansion=self.encoder.expansion,
-                                         n_classes=n_classes)
+                                         n_classes=n_classes, sigmoid=sigmoid)
 
     def _build_resnet(self):
         block = self._get_block()
