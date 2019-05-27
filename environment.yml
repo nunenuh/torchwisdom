@@ -1,4 +1,4 @@
-name: prodwork
+name: torchwisdom
 channels:
   - conda-forge
   - pytorch
@@ -184,7 +184,7 @@ dependencies:
     - murmurhash==1.0.2
     - nbconvert==5.4.1
     - nltk==3.4
-    - notebook==5.7.7
+    - notebook==5.7.8
     - opencv-contrib-python==4.0.1.24
     - opencv-python==4.0.1.24
     - pip==19.1.1
@@ -217,7 +217,7 @@ dependencies:
     - urllib3==1.24.1
     - virtualenv==16.5.0
     - wasabi==0.2.1
-    - wheel==0.33.2
+    - wheel==0.33.1
     - widgetsnbextension==3.4.2
-prefix: /opt/anaconda3/envs/prodwork
+prefix: /opt/anaconda3/envs/torchwisdom
 
