@@ -79,7 +79,7 @@ def bce_loss_with_logits_accuracy(y_pred: Tensor, y_true: Tensor) -> Tensor:
 def dice_coeff(y_pred: Tensor, y_true: Tensor, smooth: float = 1.) -> Tensor:
     y_pred, y_true = utils.flatten_check(y_pred, y_true)
     intersection = (y_pred * y_true).sum()
-    return 1 - (2. * intersection + smooth) / (y_pred.sum() + y_true.sum() + smooth)
+    return (2. * intersection + smooth) / (y_pred.sum() + y_true.sum() + smooth)
 
 
 # got idea from fastai
