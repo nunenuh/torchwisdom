@@ -63,12 +63,12 @@ class SuperviseTrainer(Trainer):
         self.optimizer = self.optwr.create(lr, self.optimizer, **kwargs)
 
     def _backward(self, loss: nn.Module):
-        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
     def _train_forward(self, feature, target):
         self.handler.on_train_forward_begin(feature=feature, target=target)
+        self.optimizer.zero_grad()
         pred = self._forward(feature)
         loss = self._loss_fn(pred, target)
         self.handler.on_train_forward_end(loss=loss, y_pred=pred, y_true=target)
@@ -97,6 +97,7 @@ class SuperviseTrainer(Trainer):
 
     def _validate_forward(self, feature, target):
         self.handler.on_validate_forward_begin(feature=feature, target=target)
+        self.optimizer.zero_grad()
         pred = self._forward(feature)
         loss = self._loss_fn(pred, target)
         self.handler.on_validate_forward_end(loss=loss, y_pred=pred, y_true=target)
