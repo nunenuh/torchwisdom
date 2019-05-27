@@ -5,8 +5,11 @@ notebook/*
 *.egg-info/*
 .tox/*
 
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
+torchwisdom/__py
 *.py[cod]
 *$py.class
 
