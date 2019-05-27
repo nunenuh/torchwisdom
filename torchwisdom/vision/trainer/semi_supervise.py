@@ -35,8 +35,8 @@ class AutoEncoderTrainer(SemiSuperviseTrainer):
     def _data_loss_check_clean(self, pred, target):
         name = self.criterion.__class__.__name__
         if name == 'BCELoss' or name == 'BCEWithLogitsLoss':
-            pred = pred.view(-1)
-            target = target.view(-1)
+            pred = pred.contiguous().view(-1)
+            target = target.contiguous().view(-1)
         if name == 'MSELoss':
             pred = pred.view(-1)
             target = target.view(-1)
