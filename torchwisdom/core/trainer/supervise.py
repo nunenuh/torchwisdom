@@ -122,6 +122,9 @@ class SuperviseTrainer(Trainer):
         self._build_state_manager()
         self._build_callback_handler()  # CallbackHandler need to be the last to build
 
+        self.model = self.model.to(self.device)
+
+
         mbar = master_bar(range(epoch_num))
         self.handler.on_fit_begin(epoch_num=epoch_num, master_bar=mbar)
         for epoch in mbar:
@@ -156,6 +159,9 @@ class SuperviseTrainer(Trainer):
         epoch_num = trainer_state.get("epoch").get("num")
         self._build_optimizer(lr)
         self._build_callback_handler_resume()  # CallbackHandler need to be the last to build
+
+        self.model = self.model.to(self.device)
+
 
         mbar = master_bar(range(epoch_curr - 1, epoch_num))
         self.handler.on_resume_begin(epoch_num=epoch_num, master_bar=mbar)
