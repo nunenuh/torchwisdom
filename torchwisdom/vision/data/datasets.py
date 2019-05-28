@@ -262,7 +262,7 @@ class AutoEncoderDataset(data.Dataset):
         valid_index += random.sample(list_index, size)
         train_index = list(set(list_index) - set(valid_index))
         train_index, valid_index = sorted(train_index), sorted(valid_index)
-        print(train_index)
+        # print(train_index)
         self.train_feature_files = [self.feature_files[i] for i in train_index]
         self.train_target_files = [self.target_files[i] for i in train_index]
         self.valid_feature_files = [self.feature_files[i] for i in valid_index]
