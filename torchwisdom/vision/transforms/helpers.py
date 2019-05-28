@@ -91,11 +91,11 @@ def imagenet_valid_transform(image_size: Tuple = (224, 224), normalize: bool = T
     return tmft
 
 
-def std_train_pair_transform(image_size: Tuple = (224, 224), resize_crop: Tuple = (224, 224),
+def std_train_pair_transform(image_size: Tuple = (224, 224), resized_crop: Tuple = (224, 224),
                              normalize=True, grayscale=False,
                              hflip=False, vlip=False, rotate=None):
     mean, std = get_imagenet_mean_std()
-    tmft = get_pair_transforms(resize=image_size, resize_crop=resize_crop, grayscale=grayscale,
+    tmft = get_pair_transforms(resize=image_size, resized_crop=resized_crop, grayscale=grayscale,
                                hflip=hflip, vflip=vlip, rotate=rotate,
                                normalize=normalize, norm_mean=mean, norm_std=std)
 
