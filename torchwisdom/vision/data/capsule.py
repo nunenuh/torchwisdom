@@ -87,7 +87,10 @@ def autoencoder_data(path: str, feature_dir: str, target_dir: str,
     trainset = AutoEncoderDataset(train_path, feature_dir, target_dir,
                                   split_dataset=split_dataset, valid_size=valid_size, mode='train',
                                   limit_size=limit_size, limit_type=limit_type,
-                                  pair_transform=std_train_pair_transform(image_size, normalize, grayscale=grayscale))
+                                  pair_transform=std_train_pair_transform(image_size=image_size,
+                                                                          resized_crop=image_size,
+                                                                          normalize=normalize,
+                                                                          grayscale=grayscale))
 
     validset = AutoEncoderDataset(valid_path, feature_dir, target_dir,
                                   split_dataset=split_dataset, valid_size=valid_size, mode='valid',
