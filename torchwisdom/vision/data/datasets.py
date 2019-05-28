@@ -6,8 +6,34 @@ import PIL
 import PIL.Image
 from torchwisdom.vision.transforms import pair as pair_transforms
 import torchvision.transforms as transforms
-from torchvision.datasets import ImageFolder
+from torchvision import datasets
 from typing import *
+import torch
+
+
+
+class ImageFolder(datasets.ImageFolder):
+    def __init__(self, root, transform=None, target_transform=None):
+        super(ImageFolder, self).__init__(root, transform, target_transform)
+
+    def sample(self, num, shuffle=False, use_classes=True):
+        samples = self.samples
+        if shuffle: random.shuffle(samples)
+        data = samples[0:num]
+        samples, targets = [],[]
+        for idx, (path, target) in enumerate(data):
+            sample = self.loader(path)
+            samples.append(sample)
+            targets.append(target)
+        if use_classes:
+            targets = self.target_classes(targets)
+        return samples, targets
+
+    def target_classes(self, targets):
+        out = []
+        for t in targets:
+            out.append(self.classes[t])
+        return out
 
 
 class SiamesePairDataset(data.Dataset):
