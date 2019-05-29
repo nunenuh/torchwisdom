@@ -3,7 +3,7 @@ from typing import *
 import torchvision.transforms as transforms
 from ..transforms import pair as pair_transforms
 
-__all__ = ['get_transforms', 'get_pair_transforms',
+__all__ = ['get_transforms', 'get_pair_transforms', 'get_imagenet_mean_std',
            'imagenet_normalize', 'imagenet_train_transform', 'imagenet_valid_transform',
            'std_train_pair_transform', 'pair_imagenet_normalize', 'std_valid_pair_transform']
 
