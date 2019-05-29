@@ -15,13 +15,31 @@ def dice_coeff(input, target, smooth=1.):
 
 
 class DiceLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, sigmoid_norm=False):
         super(DiceLoss, self).__init__()
+        self.sigmoid_norm = sigmoid_norm
 
     def forward(self, input, target):
-        dcoeff = dice_coeff(input, target)
-        return 1 - dcoeff
+        if self.sigmoid_norm:
+            input = torch.sigmoid(input)
+        else:
+            softmax = nn.Softmax(dim=1)
+            input = softmax(input)
+        return dice_coeff(input, target)
 
+
+class SoftDiceLoss(nn.Module):
+    def __init__(self, sigmoid_norm=False):
+        super(SoftDiceLoss, self).__init__()
+        self.sigmoid_norm = sigmoid_norm
+
+    def forward(self, input, target):
+        if self.sigmoid_norm:
+            input = torch.sigmoid(input)
+        else:
+            softmax = nn.Softmax(dim=1)
+            input = softmax(input)
+        return 1 - dice_coeff(input, target)
 # inspiration from
 # github.com/jeffwen/road_building_extraction/blob/master/src/utils/core.py
 # and other source
