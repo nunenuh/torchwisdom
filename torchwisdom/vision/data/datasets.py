@@ -71,6 +71,7 @@ class SiamesePairDataset(data.Dataset):
         return (im1, im2), sim
 
     def _files_mapping(self):
+        print("Files Mapping, Please wait... this can take several minutes depend on the number of data...")
         dct = {}
         for f in self.files:
             spl = str(f).split('/')
@@ -163,6 +164,7 @@ class SiamesePairDataset(data.Dataset):
         return pair_sampled
 
     def _pair_files(self):
+        print("Generating Pair, please wait this can take several minutes depend on the number of data...")
         fmap = self.files_map
         base_path = self.root
         sim_pair = self._similar_pair()
