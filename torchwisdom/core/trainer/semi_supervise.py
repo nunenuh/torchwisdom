@@ -60,6 +60,11 @@ class SemiSuperviseTrainer(Trainer):
         self._backward(loss)
         self.handler.on_train_backward_end()
 
+    def data_to_device(self, feature, target):
+        feature = feature.to(device=self.device)
+        target = target.to(device=self.device)
+        return feature, target
+
     def _train(self, epoch, mbar: master_bar):
         self.handler.on_train_begin(master_bar=mbar)
         self.model.train()
@@ -67,8 +72,7 @@ class SemiSuperviseTrainer(Trainer):
         trainbar = progress_bar(train_loader, parent=mbar)
         for idx, (feature, target) in enumerate(trainbar):
             self.handler.on_train_batch_begin(batch_curr=idx, master_bar=mbar)
-            feature = feature.to(device=self.device)
-            target = target.to(device=self.device)
+            feature, target = self.data_to_device(feature, target)
 
             loss = self._train_forward(feature, target)
             self._train_backward(loss)
@@ -92,8 +96,7 @@ class SemiSuperviseTrainer(Trainer):
         with torch.no_grad():
             for idx, (feature, target) in enumerate(progbar):
                 self.handler.on_validate_batch_begin(batch_curr=idx, master_bar=mbar)
-                feature = feature.to(device=self.device)
-                target = target.to(device=self.device)
+                feature, target = self.data_to_device(feature, target)
 
                 self._validate_forward(feature, target)
                 self.handler.on_validate_batch_end(master_bar=mbar)
