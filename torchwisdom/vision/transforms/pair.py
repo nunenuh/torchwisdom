@@ -146,7 +146,7 @@ class PairRandomResizedCrop(transforms.RandomResizedCrop):
         img1 = F.resized_crop(img1, i1, j1, h1, w1, self.size, self.interpolation)
 
         i2, j2, h2, w2 = self.get_params(img2, self.scale, self.ratio)
-        img2 = F.resized_crop(img2,  i1, j1, h1, w1, self.size, self.interpolation)
+        img2 = F.resized_crop(img2, i1, j1, h1, w1, self.size, self.interpolation)
 
         return img1, img2
 
@@ -210,3 +210,12 @@ class PairNormalize(transforms.Normalize):
             mean, std = [torch.mean(torch.Tensor(self.mean))], [torch.mean(torch.Tensor(self.std))]
             return F.normalize(tensor, mean, std, self.inplace)
         return F.normalize(tensor, self.mean, self.std, self.inplace)
+
+
+class PairToColor(object):
+    def __init__(self):
+        super(PairToColor, self).__init__()
+
+    def __call__(self, img1: Image.Image, img2: Image.Image):
+        im1, im2 = img1.convert("RGB"), img2.convert("RGB")
+        return im1, im2

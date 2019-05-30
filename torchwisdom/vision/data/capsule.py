@@ -103,3 +103,26 @@ def autoencoder_data(path: str, feature_dir: str, target_dir: str,
     data_capsule.transform = imagenet_valid_transform(image_size, normalize)
 
     return data_capsule
+
+
+class SiamesePairDataCapsule(DataCapsule):
+    def __init__(self, trainset: SiamesePairDataset, validset: SiamesePairDataset, testset: SiamesePairDataset = None,
+                 batch_size=64, shuffle=True, num_workers=2):
+        super(SiamesePairDataCapsule, self).__init__(trainset, validset, testset, batch_size, shuffle, num_workers)
+        self.trainset: SiamesePairDataset = trainset
+        self.validset: SiamesePairDataset = validset
+        self.testset: SiamesePairDataset = testset
+
+        self.trn_feat_transform: transforms.Compose = trainset.transform
+        self.trn_pair_transform: ptransforms.PairCompose = trainset.pair_transform
+        self.trn_targ_transform: transforms.Compose = trainset.target_transform
+
+        self.val_feat_transform: transforms.Compose = validset.transform
+        self.val_pair_transform: ptransforms.PairCompose = validset.pair_transform
+        self.val_targ_transform: transforms.Compose = validset.target_transform
+
+        self.transform = validset.transform
+        self.case_type = 'vision'
+        self.data_type = 'categorical'
+        self.classes = None
+        self.class_idx = None

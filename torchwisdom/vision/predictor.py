@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from ..core.data import DataCapsule
 from ..core.predictor import VisionSupervisePredictor, VisionSemiSupervisePredictor
+from .viz import *
 
 __all__ = ['ConvClassifierPredictor', 'ConvAutoEncoderPredictor']
 
@@ -27,6 +28,8 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
             return is_pil_verified(feature)
         elif id_data is 'tensor':
             return is_tensor_image_compatible(feature)
+        elif id_data is 'list':
+            return is_list_compatible(feature)
         else:
             return False
 
@@ -40,6 +43,16 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
             out = out.convert("RGB")
         elif id_data == 'pil' or id_data == 'tensor':
             out = feature
+        elif id_data == 'list':
+            ar = []
+            for feat in feature:
+                feat = feat.convert("RGB")
+                feat = np.array(feat)
+                ar.append(feat)
+            ar = np.array(ar)
+            out = torch.from_numpy(ar)
+            out = out.permute(0, 3, 1, 2).float()
+            # print(out.shape)
         else:
             out = None
         return out, id_data
@@ -54,6 +67,8 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
                     feat: torch.Tensor = loaded_data
                     if not is_tensor_batch_image(feature):
                         feat = feature.unsqueeze(dim=0)
+                elif loaded_type == 'list':
+                    feat = loaded_data
                 else:
                     feat: torch.Tensor = self.transform(loaded_data)
                     feat = feat.unsqueeze(dim=0)
@@ -121,11 +136,34 @@ class ConvClassifierPredictor(VisionSupervisePredictor):
             return class_index, class_label
         return False
 
-    def predict(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor], use_topk=False, kval=5):
+    def _show_images(self, feature, result, target):
+        title = []
+        for idx, info in enumerate(zip(result[0], result[1], target)):
+            prob_pred = info[0] * 100
+            class_pred = self.data_state.classes[info[1]]
+            # print(info)
+            if type(info[2]) != str:
+                class_targ = self.data_state.classes[info[2]]
+            else:
+                class_targ = info[2]
+            t = f'{class_pred}({prob_pred.item():.2f}%) / {class_targ}'
+            title.append(t)
+
+        # print(feature)
+
+        images = feature.permute(0, 2, 3, 1)
+        show_figure(images, title, figsize=(15, 15))
+
+    def predict(self, feature: Union[str, np.ndarray, Image.Image, torch.Tensor],
+                target=None, use_topk=True,
+                kval=1, show_images=False):
         feat = self._pre_predict(feature)
         prediction = self._predict(feat)
         result = self._post_predict(prediction, use_topk=use_topk, kval=kval)
-        return result
+        if show_images:
+            self._show_images(feat, result, target)
+        else:
+            return result
 
 
 class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
@@ -143,6 +181,8 @@ class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
             return is_pil_verified(feature)
         elif id_data is 'tensor':
             return is_tensor_image_compatible(feature)
+        elif id_data is 'list':
+            return is_list_compatible(feature)
         else:
             return False
 
@@ -156,6 +196,13 @@ class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
             out = out.convert("RGB")
         elif id_data == 'pil' or id_data == 'tensor':
             out = feature
+        elif id_data == 'list':
+            ar = []
+            for feat in feature:
+                feat = feat.convert("RGB")
+                feat = np.array(feat)
+                ar.append(feat)
+            out = torch.from_numpy(ar)
         else:
             out = None
         return out, id_data
@@ -204,6 +251,10 @@ class ConvAutoEncoderPredictor(VisionSemiSupervisePredictor):
         result = self._post_predict(prediction)
         return result
 
+class ConvSiamesePredictor(VisionSemiSupervisePredictor):
+    def __init__(self, file: Union[str, Dict], **kwargs: Any):
+        super(ConvSiamesePredictor, self).__init__(file, **kwargs)
+        self.model = self.model_state.class_obj
 
 if __name__ == "__main__":
     ...

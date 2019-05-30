@@ -11,7 +11,6 @@ from typing import *
 import torch
 
 
-
 class ImageFolder(datasets.ImageFolder):
     def __init__(self, root, transform=None, target_transform=None):
         super(ImageFolder, self).__init__(root, transform, target_transform)
@@ -20,7 +19,7 @@ class ImageFolder(datasets.ImageFolder):
         samples = self.samples
         if shuffle: random.shuffle(samples)
         data = samples[0:num]
-        samples, targets = [],[]
+        samples, targets = [], []
         for idx, (path, target) in enumerate(data):
             sample = self.loader(path)
             samples.append(sample)
@@ -69,7 +68,7 @@ class SiamesePairDataset(data.Dataset):
 
         if self.target_transform:
             sim = self.target_transform(sim)
-        return im1, im2, sim
+        return (im1, im2), sim
 
     def _files_mapping(self):
         dct = {}

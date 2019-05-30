@@ -32,9 +32,9 @@ class ImagesMeanStdFinder(object):
         progress_bar = tqdm(self.files, dynamic_ncols=True)
         for f in progress_bar:
             progress_bar.set_description(f"Load file {f}")
-            images.append(self._image_to_tensor(f))
+            yield self._image_to_tensor(f)
             progress_bar.refresh()
-        return images
+        # return images
 
     def find_mean_std(self, verbose: bool = False) -> dict:
         """

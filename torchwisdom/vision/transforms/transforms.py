@@ -38,6 +38,13 @@ class TensorToNumpy(object):
         return NotImplementedError()
 
 
+class ToColor(object):
+    def __init__(self):
+        super(ToColor, self).__init__()
+
+    def __call__(self, img: Image.Image):
+        return img.convert("RGB")
+
 
 if __name__ == '__main__':
     pass
