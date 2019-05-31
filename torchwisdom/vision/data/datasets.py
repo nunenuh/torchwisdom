@@ -1,6 +1,11 @@
 import os
 import random
 import pathlib
+from typing import List, Any
+
+import numba
+from numba import jit, jitclass
+
 import torch.utils.data as data
 import PIL
 import PIL.Image
@@ -36,20 +41,34 @@ class ImageFolder(datasets.ImageFolder):
 
 
 class SiamesePairDataset(data.Dataset):
-    def __init__(self, root, ext='jpg',
+    def __init__(self, root, ext: str = 'jpg', glob_pattern: str = "*/*.",
+                 similar_factor: float = 1., different_factor: float = 0.38,
+                 micro_factor: float = 0.38,
                  transform: transforms.Compose = None,
                  pair_transform: pair_transforms.PairCompose = None,
                  target_transform: transforms.Compose = None):
         super(SiamesePairDataset, self).__init__()
+        self._init_seed()
+        self.similar_factor = similar_factor
+        self.micro_factor = micro_factor
+        self.different_factor = different_factor
+
         self.transform: transforms.Compose = transform
         self.pair_transform: pair_transforms.PairCompose = pair_transform
         self.target_transform: transforms.Compose = target_transform
         self.root: str = root
 
         self.base_path = pathlib.Path(root)
-        self.files = sorted(list(self.base_path.glob("*/*." + ext)))
+        self.files = sorted(list(self.base_path.glob(glob_pattern + ext)))
         self.files_map = self._files_mapping()
+        self.classes = list(self.files_map.keys())
+        self.similar_pair = self._similar_pair()
+        self.different_pair = self._different_pair()
         self.pair_files = self._pair_files()
+
+    @staticmethod
+    def _init_seed():
+        random.seed(1261)
 
     def __len__(self):
         return len(self.pair_files)
@@ -71,7 +90,7 @@ class SiamesePairDataset(data.Dataset):
         return (im1, im2), sim
 
     def _files_mapping(self):
-        print("Files Mapping, Please wait... this can take several minutes depend on the number of data...")
+        print(f"Files Mapping from {self.root}, please wait...")
         dct = {}
         for f in self.files:
             spl = str(f).split('/')
@@ -84,109 +103,87 @@ class SiamesePairDataset(data.Dataset):
                 dct[dirname] = sorted(dct[dirname])
         return dct
 
-    def _similar_pair(self):
+    def _similar_pair(self) -> List:
+        # print("Generating Similar Pair, please wait...")
         fmap = self.files_map
-        atp = {}
-        c = 0
+        # atp = {}
+        similar = []
         for key in fmap.keys():
-            atp.update({key: []})
+            # atp.update({key: []})
             n = len(fmap[key])
-            ctp = ((n - 1) * n) + n
-            for i in range(n):
-                for j in range(n):
-                    fp = os.path.join(key, fmap[key][i])
-                    fo = os.path.join(key, fmap[key][j])
-                    atp[key].append(((fp, fo), 0))
-        return atp
+            for (idz, idj, sim) in self._similar_sampling_generator(n):
+                fz = os.path.join(self.base_path, key, fmap[key][idz])
+                fj = os.path.join(self.base_path, key, fmap[key][idj])
+                # atp[key].append(((fz, fj), 0))
+                similar.append(((fz, fj), 0))
+        num_sample = int(len(similar) * self.similar_factor)
+        similar = random.sample(similar, num_sample)
+        return similar
+
+    def _similar_sampling_generator(self, n):
+        num_sample = int(n * n * self.micro_factor)
+        list_similar = [(i, j, 0) for i in range(n) for j in range(n)]
+        sampled = random.sample(list_similar, num_sample)
+        return sampled
 
     def _len_similar_pair(self):
-        fmap = self.files_map
         dct = {}
-        spair = self._similar_pair()
-        for key in fmap.keys():
-            dd = {key: len(spair[key])}
+        for key in self.files_map.keys():
+            dd = {key: len(self.similar_pair[key])}
             dct.update(dd)
         return dct
 
-    def _diff_pair_dircomp(self):
-        fmap = self.files_map
-        dirname = list(fmap.keys())
-        pair_dircomp = []
-        for idx in range(len(dirname)):
-            dirtmp = dirname.copy()
-            dirtmp.pop(idx)
-            odir = dirtmp
-            pdir = dirname[idx]
-            pdc = (pdir, odir)
-            pair_dircomp.append(pdc)
-        return pair_dircomp
+    def _pair_class_to_other(self) -> List:
+        # print("Generating pair class to other class, please wait...")
+        num = len(self.classes)
+        list_idx = [i for i in range(num)]
+        pair = []
+        for idz in range(num):
+            other_list = list_idx.copy()
+            other_list.pop(idz)
+            for idj in other_list:
+                pair.append((idz, idj))
+        num_sample = int(len(pair) * self.different_factor)
+        pair = random.sample(pair, num_sample)
+        # print("Generating pair class to other class, finished...")
+        return pair
+
+    def _diff_sampling_generator(self):
+        # print("Creating diff sampling generator, please wait...")
+        list_sampled: List[Any] = []
+        for idx, (cidx, oidx) in enumerate(self._pair_class_to_other()):
+            cname, cother = self.classes[cidx], self.classes[oidx]
+            num_cname, num_cother = len(self.files_map[cname]), len(self.files_map[cother])
+            num_sample = int(num_cname * num_cother * self.micro_factor)
+            list_diff = [((cidx, i), (oidx, j), 1) for i in range(num_cname) for j in range(num_cother)]
+            sampled = random.sample(list_diff, num_sample)
+            list_sampled += sampled
+        # print("Creating diff sampling generator, finished...")
+        return list_sampled
 
     def _different_pair(self):
-        fmap = self.files_map
-        pair_sampled = {}
-        pair_dircomp = self._diff_pair_dircomp()
-        len_spair = self._len_similar_pair()
-        for idx, (kp, kvo) in enumerate(pair_dircomp):
-            val_pri = fmap[kp]
-            if len(val_pri) >= 4:
-                num_sample = len(val_pri) // 4
-            else:
-                num_sample = len(val_pri)
+        # print("Generating Different Pair, please wait...")
+        diff = []
+        for idx, (z, j, sim) in enumerate(self._diff_sampling_generator()):
+            zname, idz = self.classes[z[0]], z[1]
+            jname, idj = self.classes[j[0]], j[1]
+            zfile = self.files_map[zname][idz]
+            jfile = self.files_map[jname][idj]
+            fz = os.path.join(self.base_path, zname, zfile)
+            fj = os.path.join(self.base_path, jname, jfile)
+            diff.append(((fz, fj), 1))
 
-            pair_sampled.update({kp: []})
-            for vp in val_pri:
-                # get filename file primary
-                fp = os.path.join(kp, vp)
-                for ko in kvo:
-                    vov = fmap[ko]
-                    pair = []
-                    for vo in vov:
-                        fo = os.path.join(ko, vo)
-                        pair.append(((fp, fo), 1))
-                    if len(pair) > num_sample:
-                        mout = random.sample(pair, num_sample)
-                    else:
-                        mout = pair
-                    pair_sampled[kp].append(mout)
-
-        for key in pair_sampled.keys():
-            val = pair_sampled[key]
-            num_sample = len_spair[key]
-            tmp_val = []
-            for va in val:
-                for v in va:
-                    tmp_val.append(v)
-
-            if len(tmp_val) > num_sample:
-                pair_sampled[key] = random.sample(tmp_val, num_sample)
-            else:
-                pair_sampled[key] = tmp_val
-        return pair_sampled
+        sim_len = len(self.similar_pair)
+        if len(diff) > sim_len:
+            diff = random.sample(diff, sim_len)
+        # print("Generating Different Pair, finished...")
+        return diff
 
     def _pair_files(self):
-        print("Generating Pair, please wait this can take several minutes depend on the number of data...")
-        fmap = self.files_map
-        base_path = self.root
-        sim_pair = self._similar_pair()
-        diff_pair = self._different_pair()
-        files_list = []
-        for key in fmap.keys():
-            spair = sim_pair[key]
-            dpair = diff_pair[key]
-            n = len(spair)
-            for i in range(n):
-                spair_p = os.path.join(base_path, spair[i][0][0])
-                spair_o = os.path.join(base_path, spair[i][0][1])
-                spair[i] = ((spair_p, spair_o), 0)
-
-                dpair_p = os.path.join(base_path, dpair[i][0][0])
-                dpair_o = os.path.join(base_path, dpair[i][0][1])
-                dpair[i] = ((dpair_p, dpair_o), 1)
-
-                files_list.append(spair[i])
-                files_list.append(dpair[i])
-
-        return files_list
+        sim_pair = self.similar_pair
+        diff_pair = self.different_pair
+        all_pair = sim_pair + diff_pair
+        return all_pair
 
 
 class AutoEncoderDataset(data.Dataset):
