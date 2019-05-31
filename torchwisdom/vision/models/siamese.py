@@ -7,7 +7,7 @@ import torch.utils.model_zoo as model_zoo
 from torchwisdom.vision.models import mobilenet
 from torchwisdom.core.nn import layers as layers
 
-__all__ = ['SiameseResNet', 'SiameseModelTrainer', 'siamese_resnet', 'siamese_mobilenet']
+__all__ = ['SiameseResNet', 'SiameseModelTrainer', 'siamese_resnet', 'siamese_mobilenet', 'siamese_squeezenet']
 
 
 class SiameseResNet(resnet.ResNet):
@@ -86,7 +86,7 @@ def siamese_squeezenet(pretrained_backbone=True, encoder_digit=64, version=1.1, 
     if pretrained_backbone:
         backbone.load_state_dict(model_zoo.load_url(squeezenet.model_urls[name_ver]))
     backbone.num_classes = encoder_digit
-    backbone.classifier = layers.SqueezeNetCustomClassifers(num_classes=encoder_digit)
+    backbone.classifier = layers.SqueezeNetCustomClassifiers(num_classes=encoder_digit)
     model_trainer = SiameseModelTrainer(backbone)
     return model_trainer, backbone
 
