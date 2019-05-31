@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-__all__ = ['Flatten', 'AdaptiveConcatPool2d', 'Lambda', 'SimpleClassifiers', 'SqueezeNetCustomClassifers']
+__all__ = ['Flatten', 'AdaptiveConcatPool2d', 'Lambda', 'SimpleClassifiers', 'SqueezeNetCustomClassifiers']
 
 
 class Flatten(nn.Module):
     def __init__(self):
         super(Flatten, self).__init__()
+
     def forward(self, x):
         return x.view(x.size(0), -1)
 
@@ -16,27 +16,30 @@ class Flatten(nn.Module):
 # got from fastai
 class AdaptiveConcatPool2d(nn.Module):
     "Layer that concats `AdaptiveAvgPool2d` and `AdaptiveMaxPool2d`."
-    def __init__(self, sz:int=None):
+
+    def __init__(self, sz: int = None):
         "Output will be 2*sz or 2 if sz is None"
         super().__init__()
         sz = sz or 1
-        self.ap,self.mp = nn.AdaptiveAvgPool2d(sz), nn.AdaptiveMaxPool2d(sz)
+        self.ap, self.mp = nn.AdaptiveAvgPool2d(sz), nn.AdaptiveMaxPool2d(sz)
+
     def forward(self, x): return torch.cat([self.mp(x), self.ap(x)], 1)
 
 
-#got from fastai
+# got from fastai
 class Lambda(nn.Module):
     "An easy way to create a pytorch layer for a simple `func`."
+
     def __init__(self, func):
         "create a layer that simply calls `func` with `x`"
         super().__init__()
-        self.func=func
+        self.func = func
 
     def forward(self, x): return self.func(x)
 
 
 class Classfiers(nn.Module):
-    def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=[0.5,0.3,0.2]):
+    def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=[0.5, 0.3, 0.2]):
         super(Classfiers, self).__init__()
         modules = []
         if use_batchnorm: modules.append(nn.BatchNorm1d(in_features))
@@ -44,14 +47,14 @@ class Classfiers(nn.Module):
         modules.append(nn.Linear(in_features, in_features // 2))
         modules.append(nn.ReLU(inplace=True))
 
-        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features//2))
+        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features // 2))
         if use_dropout: modules.append(nn.Dropout(dprob[1]))
-        modules.append(nn.Linear(in_features //2, in_features // 4))
+        modules.append(nn.Linear(in_features // 2, in_features // 4))
         modules.append(nn.ReLU(inplace=True))
 
-        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features//4))
+        if use_batchnorm: modules.append(nn.BatchNorm1d(in_features // 4))
         if use_dropout: modules.append(nn.Dropout(dprob[2]))
-        modules.append(nn.Linear(in_features //4, n_classes))
+        modules.append(nn.Linear(in_features // 4, n_classes))
 
         self.classfiers = nn.Sequential(*modules)
 
@@ -63,7 +66,7 @@ class Classfiers(nn.Module):
 class SimpleClassifiers(nn.Module):
     def __init__(self, in_features, n_classes, use_batchnorm=True, use_dropout=True, dprob=0.3):
         super(SimpleClassifiers, self).__init__()
-        if use_batchnorm : self.bn = nn.BatchNorm1d(in_features)
+        if use_batchnorm: self.bn = nn.BatchNorm1d(in_features)
         if use_dropout: self.dropout = nn.Dropout(p=dprob)
         self.fc = nn.Linear(in_features, n_classes)
 
