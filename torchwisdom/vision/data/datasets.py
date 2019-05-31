@@ -2,9 +2,7 @@ import os
 import random
 import pathlib
 from typing import List, Any
-
-import numba
-from numba import jit, jitclass
+from tqdm import tqdm
 
 import torch.utils.data as data
 import PIL
@@ -58,6 +56,7 @@ class SiamesePairDataset(data.Dataset):
         self.target_transform: transforms.Compose = target_transform
         self.root: str = root
 
+        # print(f"Files Mapping from {self.root}, please wait...")
         self.base_path = pathlib.Path(root)
         self.files = sorted(list(self.base_path.glob(glob_pattern + ext)))
         self.files_map = self._files_mapping()
@@ -90,7 +89,6 @@ class SiamesePairDataset(data.Dataset):
         return (im1, im2), sim
 
     def _files_mapping(self):
-        print(f"Files Mapping from {self.root}, please wait...")
         dct = {}
         for f in self.files:
             spl = str(f).split('/')
@@ -108,8 +106,9 @@ class SiamesePairDataset(data.Dataset):
         fmap = self.files_map
         # atp = {}
         similar = []
-        for key in fmap.keys():
-            # atp.update({key: []})
+        text = f'generating similar pair from\t {self.root}'
+        bar = tqdm(fmap.keys(), desc=text)
+        for key in bar:
             n = len(fmap[key])
             for (idz, idj, sim) in self._similar_sampling_generator(n):
                 fz = os.path.join(self.base_path, key, fmap[key][idz])
@@ -164,7 +163,9 @@ class SiamesePairDataset(data.Dataset):
     def _different_pair(self):
         # print("Generating Different Pair, please wait...")
         diff = []
-        for idx, (z, j, sim) in enumerate(self._diff_sampling_generator()):
+        text = f'generating different pair from\t {self.root}'
+        bar = tqdm(self._diff_sampling_generator(), desc=text)
+        for z, j, sim in bar:
             zname, idz = self.classes[z[0]], z[1]
             jname, idj = self.classes[j[0]], j[1]
             zfile = self.files_map[zname][idz]
