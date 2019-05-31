@@ -68,8 +68,12 @@ class ContrastiveLoss(torch.nn.Module):
 
     def forward(self, y_predz, y_predj, y_true):
         dw = F.pairwise_distance(y_predz, y_predj)
-        loss_similar = (1 - y_true) * torch.mean(torch.pow(dw, 2))
-        loss_dissimilar = y_true * torch.mean(torch.pow(torch.clamp(self.margin - dw, min=0.0), 2))
+        loss_similar = torch.mean((1 - y_true) * torch.pow(dw, 2))
+        loss_dissimilar = torch.mean(y_true * torch.pow(torch.clamp(self.margin - dw, min=0.0), 2))
         loss_contrastive = loss_similar + loss_dissimilar
+        #
+        # euclidean_distance = F.pairwise_distance(y_predz, y_predj)
+        # loss_contrastive = torch.mean((1 - y_true) * torch.pow(euclidean_distance, 2) +
+        #                               (y_true) * torch.pow(torch.clamp(self.margin - euclidean_distance, min=0.0), 2))
 
         return loss_contrastive
