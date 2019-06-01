@@ -9,7 +9,7 @@ from ..metrics import AverageMetrics
 __all__ = ['AverageMetricsCallback', 'LossCallback', 'AccuracyCallback', 'AccuracyTopKCallback',
            'AccuracyThresholdCallback', 'ErrorRateCallback', 'MAECallback', 'MSECallback', 'RMSECallback',
            'MSLECallback', 'DiceCoefCallback', 'BCEAccuracyCallback', 'BCELogitsAccuracyCallback',
-           'AccuracyRegressionCallback']
+           'AccuracyRegressionCallback', 'AccuracySiameseCallback']
 
 
 class AverageMetricsCallback(Callback):
