@@ -1,10 +1,10 @@
 from typing import *
+import torch.nn.functional as F
 from torch import Tensor
 from torchwisdom.core.callback import Callback
 import torchwisdom.core.metrics.functional as M
 from torchwisdom.core.statemgr.state import StateManager
 from ..metrics import AverageMetrics
-
 
 __all__ = ['AverageMetricsCallback', 'LossCallback', 'AccuracyCallback', 'AccuracyTopKCallback',
            'AccuracyThresholdCallback', 'ErrorRateCallback', 'MAECallback', 'MSECallback', 'RMSECallback',
@@ -21,7 +21,7 @@ class AverageMetricsCallback(Callback):
         self.name = name
 
     def on_fit_begin(self, *args: Any, **kwargs: Any) -> None:
-        metric_state= self.statemgr.state.get('metric')
+        metric_state = self.statemgr.state.get('metric')
         train: Dict = metric_state.get('train')
         train[self.name] = {'val': [], 'mean': [], 'std': [], 'epoch': []}
         valid: Dict = metric_state.get('valid')
@@ -42,8 +42,10 @@ class AverageMetricsCallback(Callback):
         state.get('epoch').append(mean)
 
     def get_metric(self, mode) -> AverageMetrics:
-        if mode == "train": return self.metric_train
-        else: return self.metric_valid
+        if mode == "train":
+            return self.metric_train
+        else:
+            return self.metric_valid
 
     def get_state(self, mode) -> Dict:
         metric_state: Dict = self.statemgr.state.get('metric')
@@ -56,14 +58,16 @@ class AverageMetricsCallback(Callback):
         state.get('mean').append(metric.mean)
         state.get('std').append(metric.std)
 
-    def train_update(self): self.update_state('train')
+    def train_update(self):
+        self.update_state('train')
 
-    def valid_update(self): self.update_state('valid')
+    def valid_update(self):
+        self.update_state('valid')
 
     @staticmethod
-    def _ypred_ytrue(**kwargs) -> Tuple[Tensor, Tensor]:
-        y_pred: Tensor = kwargs.get('y_pred')
-        y_true: Tensor = kwargs.get('y_true')
+    def _ypred_ytrue(**kwargs) -> Tuple[Any, Any]:
+        y_pred: Any = kwargs.get('y_pred')
+        y_true: Any = kwargs.get('y_true')
         return y_pred, y_true
 
     @staticmethod
@@ -94,17 +98,17 @@ class AccuracyCallback(AverageMetricsCallback):
 
     def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred, y_true = self._ypred_ytrue(**kwargs)
-        self.metric_train.update(M.accuracy(y_pred, y_true).item()*100)
+        self.metric_train.update(M.accuracy(y_pred, y_true).item() * 100)
         self.train_update()
 
     def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred, y_true = self._ypred_ytrue(**kwargs)
-        self.metric_valid.update(M.accuracy(y_pred, y_true).item()*100)
+        self.metric_valid.update(M.accuracy(y_pred, y_true).item() * 100)
         self.valid_update()
 
 
 class AccuracyTopKCallback(AverageMetricsCallback):
-    def __init__(self, topk: tuple = (1,3)):
+    def __init__(self, topk: tuple = (1, 3)):
         super(AccuracyTopKCallback, self).__init__()
         self.topk = topk
         self.name = f'acc_topk{max(topk)}'
@@ -234,6 +238,22 @@ class DiceCoefCallback(AverageMetricsCallback):
         self.valid_update()
 
 
+class AccuracySiameseCallback(AverageMetricsCallback):
+    def __init__(self):
+        super(AccuracySiameseCallback, self).__init__()
+        self.name = 'acc'
+
+    def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred, y_true = self._ypred_ytrue(**kwargs)
+        self.metric_train.update(M.accuracy_siamese_pair(y_pred, y_true).item() * 100)
+        self.train_update()
+
+    def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
+        y_pred, y_true = self._ypred_ytrue(**kwargs)
+        self.metric_valid.update(M.accuracy_siamese_pair(y_pred, y_true).item() * 100)
+        self.valid_update()
+
+
 class BCEAccuracyCallback(AverageMetricsCallback):
     def __init__(self):
         super(BCEAccuracyCallback, self).__init__()
@@ -267,7 +287,7 @@ class BCELogitsAccuracyCallback(AverageMetricsCallback):
 
 
 class AccuracyRegressionCallback(AverageMetricsCallback):
-    def __init__(self, threshold=0.5,):
+    def __init__(self, threshold=0.5, ):
         super(AccuracyRegressionCallback, self).__init__()
         self.threshold = threshold
         self.name = 'acc_reg'
@@ -285,4 +305,3 @@ class AccuracyRegressionCallback(AverageMetricsCallback):
 
 if __name__ == '__main__':
     LossCallback()
-
