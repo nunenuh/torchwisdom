@@ -40,8 +40,7 @@ def accuracy_siamese_pair(y_pred: Tuple, y_true: Tensor):
     y_predz, y_predj = y_pred
     y_pred = F.pairwise_distance(y_predz, y_predj)
     bsize = y_pred.size(0)
-    y_pred = y_pred.argmax(dim=-1).view(bsize, -1)
-    y_true = y_true.view(bsize, -1)
+    y_pred, y_true = y_pred.view(bsize, -1), y_true.view(bsize, -1)
     acc = y_pred.long() == y_true.long()
     return acc.float().mean()
 
