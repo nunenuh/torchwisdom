@@ -11,6 +11,7 @@ class AverageMetrics(object):
 
     def restart(self):
         self.value = 0
+        self.value = 0
         self.values = []
         self.mean = 0
         self.std = 0
@@ -24,10 +25,10 @@ class AverageMetrics(object):
 
 
 class AccuracyTopK(object):
-    def __init__(self, topk:tuple=(1,)):
+    def __init__(self, topk: tuple = (1,)):
         self.topk = topk
 
-    def __call__(self, y_pred:torch.Tensor, y_true:torch.Tensor):
+    def __call__(self, y_pred: torch.Tensor, y_true: torch.Tensor):
         return M.accuracy_topk(y_pred, y_true, self.topk)
 
 
@@ -35,8 +36,8 @@ class Accuracy(object):
     def __init__(self):
         super(Accuracy, self).__init__()
 
-    def __call__(self, y_pred:torch.Tensor, y_true:torch.Tensor):
-       return M.accuracy(y_pred, y_true)
+    def __call__(self, y_pred: torch.Tensor, y_true: torch.Tensor):
+        return M.accuracy(y_pred, y_true)
 
 
 class AccuracyThreshold(object):
