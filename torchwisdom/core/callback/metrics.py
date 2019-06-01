@@ -239,18 +239,19 @@ class DiceCoefCallback(AverageMetricsCallback):
 
 
 class AccuracySiameseCallback(AverageMetricsCallback):
-    def __init__(self):
+    def __init__(self, threshold=0.5):
         super(AccuracySiameseCallback, self).__init__()
         self.name = 'acc'
+        self.threshold = threshold
 
     def on_train_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred, y_true = self._ypred_ytrue(**kwargs)
-        self.metric_train.update(M.accuracy_siamese_pair(y_pred, y_true).item() * 100)
+        self.metric_train.update(M.accuracy_siamese_pair(y_pred, y_true, self.threshold).item() * 100)
         self.train_update()
 
     def on_validate_forward_end(self, *args: Any, **kwargs: Any) -> None:
         y_pred, y_true = self._ypred_ytrue(**kwargs)
-        self.metric_valid.update(M.accuracy_siamese_pair(y_pred, y_true).item() * 100)
+        self.metric_valid.update(M.accuracy_siamese_pair(y_pred, y_true, self.threshold).item() * 100)
         self.valid_update()
 
 
