@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from typing import *
 from ...core import utils
 
-
 __all__ = ['accuracy', 'accuracy_topk', 'accuracy_threshold', 'error_rate', 'dice_coeff',
            'mean_absolute_error', 'mean_squared_error', 'root_mean_squared_error',
            'mean_squared_logarithmic_error', 'accuracy_regression']
@@ -37,11 +36,21 @@ def accuracy(y_pred: Tensor, y_true: Tensor):
     return acc.float().mean()
 
 
+def accuracy_siamese_pair(y_pred: Tuple, y_true: Tensor):
+    y_predz, y_predj = y_pred
+    y_pred = F.pairwise_distance(y_predz, y_predj)
+    bsize = y_pred.size(0)
+    y_pred = y_pred.argmax(dim=-1).view(bsize, -1)
+    y_true = y_true.view(bsize, -1)
+    acc = y_pred.long() == y_true.long()
+    return acc.float().mean()
+
+
 # idea and code  got from https://github.com/fastai/fastai/blob/master/fastai/metrics.py#L30
 def accuracy_threshold(y_pred: Tensor, y_true: Tensor, thresh: float = 0.5, sigmoid: bool = False) -> Tensor:
     if sigmoid: y_pred = F.sigmoid(y_pred)
     y_thresh = y_pred > thresh
-    acc = y_thresh==y_true.byte()
+    acc = y_thresh == y_true.byte()
     return acc.float().mean()
 
 
@@ -56,7 +65,7 @@ def bce_loss(y_pred: Tensor, y_true: Tensor) -> Tensor:
 
 
 def bce_accuracy(y_pred: Tensor, y_true: Tensor) -> Tensor:
-    acc = (1 - bce_loss(y_pred, y_true))*100
+    acc = (1 - bce_loss(y_pred, y_true)) * 100
     if acc < 0: return torch.Tensor([0])
     return acc
 
@@ -68,9 +77,10 @@ def bce_loss_with_logits(y_pred: Tensor, y_true: Tensor) -> Tensor:
 
 
 def bce_loss_with_logits_accuracy(y_pred: Tensor, y_true: Tensor) -> Tensor:
-    acc = (1 - bce_loss_with_logits(y_pred, y_true))*100
+    acc = (1 - bce_loss_with_logits(y_pred, y_true)) * 100
     if acc < 0: return torch.Tensor([0])
     return acc
+
 
 # inspiration from
 # https://github.com/pytorch/pytorch/issues/1249
@@ -79,14 +89,15 @@ def bce_loss_with_logits_accuracy(y_pred: Tensor, y_true: Tensor) -> Tensor:
 def dice_coeff(y_pred: Tensor, y_true: Tensor, smooth: float = 1.) -> Tensor:
     y_pred, y_true = utils.flatten_check(y_pred, y_true)
     intersection = (y_pred * y_true).sum()
-    return (2. * intersection + smooth) / (y_pred.sum() + y_true.sum() + smooth)
+    cardinality = y_pred.sum() + y_true.sum()
+    return (2. * intersection + smooth) / (cardinality + smooth)
 
 
 # got idea from fastai
 def mean_absolute_error(y_pred: Tensor, y_true: Tensor) -> Tensor:
     # if not utils.is_flatten_same_dim(y_pred, y_true): y_pred = utils.flatten_argmax(y_pred)
     y_pred, y_true = utils.flatten_check(y_pred, y_true)
-    return torch.abs(y_true-y_pred).mean()
+    return torch.abs(y_true - y_pred).mean()
 
 
 def mean_squared_error(y_pred: Tensor, y_true: Tensor,
@@ -106,7 +117,7 @@ def root_mean_squared_error(y_pred: Tensor, y_true: Tensor,
 
 def mean_squared_logarithmic_error(y_pred: Tensor, y_true: Tensor) -> Tensor:
     y_pred, y_true = utils.flatten_check(y_pred, y_true)
-    y_pred, y_true = torch.log(1+y_pred), torch.log(1+y_true)
+    y_pred, y_true = torch.log(1 + y_pred), torch.log(1 + y_true)
     return F.mse_loss(y_pred, y_true)
 
 
@@ -117,4 +128,3 @@ def accuracy_regression(y_pred, y_true, thresh=0.5):
     correct = torch.sum(torch.abs(y_pred - y_true) < torch.abs(thresh * y_true))
     acc = ((correct * 100.0) / len(y_true))
     return acc
-
